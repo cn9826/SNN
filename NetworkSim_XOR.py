@@ -8,6 +8,19 @@ from pandas import DataFrame
 
 
 #%% Defined Functions 
+def index_duplicate (seq, item):
+    start_at = -1
+    locs = []
+    while True:
+        try:
+            loc = seq.index(item, start_at+1)
+        except ValueError:
+            break
+        else:
+            locs.append(loc)
+            start_at = loc
+    return locs
+
 def index_2d (list_2d, element):
     for row, row_list in enumerate(list_2d):
         if element in row_list:
@@ -34,15 +47,16 @@ def plotNeuronResponse (sn):
     
     # fig.show()
     
-def plotNeuronResponse_iterative(sn_list, epochs_list, only_output_layer=1):
-    for epoch in epochs_list:    
-        if only_output_layer == 0:
-            for i in range(len(sn_list[epoch])):
-                plotNeuronResponse(sn_list[epoch][i])
-        else:
-            for i in range(len(sn_list[epoch])):
-                if sn_list[epoch][i].layer_idx == num_layers - 1:
-                    plotNeuronResponse(sn_list[epoch][i])
+def plotNeuronResponse_iterative(sn_list, epochs_list, instance_list, only_output_layer=1):
+    for epoch in epochs_list:
+        for instance in instance_list:            
+            if only_output_layer == 0:
+                for i in range(len(sn_list[epoch][instance])):
+                    plotNeuronResponse(sn_list[epoch][instance][i])
+            else:
+                for i in range(len(sn_list[epoch][instance])):
+                    if sn_list[epoch][instance][i].layer_idx == num_layers - 1:
+                        plotNeuronResponse(sn_list[epoch][instance][i])
 
 #%% Initializations of Tables and Objects and Lists of Objects
 #####################################################################################################################
@@ -56,8 +70,8 @@ tau_u = 16      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 threshold = 120
 
-num_epochs = 10                 # number of epochs
-num_instances = 20              # number of training instances per epoch
+num_epochs = 1                 # number of epochs
+num_instances = 400              # number of training instances per epoch
 ## Define Input & Output Patterns
 input_pattern = \
     {
@@ -69,8 +83,8 @@ input_pattern = \
 
 output_pattern = \
     {
-        "0"     :   [150, 200],     # class 0 neuron fires first
-        "1"     :   [200, 150]      # class 1 neuron fires first
+        "0"     :   [110, 200],     # class 0 neuron fires first
+        "1"     :   [200, 110]      # class 1 neuron fires first
     }
 
 input_output_map = \
@@ -105,7 +119,8 @@ desired_out_time_vector =   [
                                     {
                                         "in_pattern"        :   None,
                                         "out_pattern"       :   None,
-                                        "out_latency"       :   [None] * num_neurons_perLayer[-1]
+                                        "out_latency"       :   [None] * num_neurons_perLayer[-1],
+                                        "class_num"         :   None
                                     }                                    
                                     for instance in range(num_instances)
                                 ]  for epoch in range(num_epochs)
@@ -118,7 +133,10 @@ for epoch in range (num_epochs):
                 input_output_map.get(stimulus_time_vector[epoch][instance]["in_pattern"])
         desired_out_time_vector[epoch][instance]["out_latency"] = \
                 output_pattern[desired_out_time_vector[epoch][instance]["out_pattern"]]
-
+        if desired_out_time_vector[epoch][instance]["out_pattern"] == "0":
+                desired_out_time_vector[epoch][instance]["class_num"] = 0
+        elif desired_out_time_vector[epoch][instance]["out_pattern"] == "1":
+                desired_out_time_vector[epoch][instance]["class_num"] = 1
 
 ## Initilize synaptic weight for all the synapses
 initial_weight = 8
@@ -162,7 +180,7 @@ for epoch in range(num_epochs):
         for synapse_idx in range(num_neurons_perLayer[0]):
             stimulus_entry = {}
             stimulus_entry["fan_in_synapse_addr"] = synapse_idx
-            stimulus_entry["time"] = stimulus_time_vector[epoch][instance][synapse_idx]
+            stimulus_entry["time"] = stimulus_time_vector[epoch][instance]["in_latency"][synapse_idx]
             stimulus_vector_info[epoch][instance].append(stimulus_entry)
 
 num_layers = len(num_neurons_perLayer)
@@ -216,7 +234,11 @@ WeightRAM = SNN.WeightRAM(num_synapses)
 for i in synapse_addr:
     neuron_idx_WRAM, connection_num = index_2d(ConnectivityTable.fan_in_synapse_addr,synapse_addr[i])
     num_fan_in = len([fan_in for fan_in in ConnectivityTable.fan_in_synapse_addr[neuron_idx_WRAM] if fan_in is not None]) 
-    weight_vector[i] = int(weight_vector[i] / num_fan_in)
+    # if hidden layer, de-uniformize fan-in weights
+    if ConnectivityTable.layer_num[neuron_idx_WRAM] == num_layers - 2:
+        # weight_vector[i] = int(weight_vector[i] / num_fan_in)
+        first_idx_hidden_layer = num_neurons_perLayer[0]
+        weight_vector[i] = weight_vector[i] - (neuron_idx_WRAM - first_idx_hidden_layer) * 2
     WeightRAM.neuron_idx[i] = neuron_idx_WRAM
     WeightRAM.weight[i] = weight_vector[i]
 
@@ -237,7 +259,7 @@ PotentialRAM.fan_out_synapse_addr = ConnectivityTable.fan_out_synapse_addr
 # col represents each Spiking Neuron object sorted by ascending index 
 sn_list =   [
                 [
-                    []*num_neurons 
+                    []
                     for instance in range(num_instances)
                 ] for epochs in range(num_epochs)
             ]
@@ -258,64 +280,137 @@ for epoch in range(num_epochs):
             # check if neuron is in the output layer 
             if sn.layer_idx == num_layers - 1:
                 sn.training_on = 1
-                sn.spike_out_time_d_list = [row[output_layer_idx] for row in desired_out_time_list]
+                sn.spike_out_time_d_list =  [
+                                                [
+                                                    [desired_out_time_vector[epoch][instance]["out_latency"][output_layer_idx]]
+                                                    for instance in range(num_instances)
+                                                ] for epoch in range(num_epochs)
+                                            ]
+                output_layer_idx += 1
 
-            sn_list[epoch].append(sn)
+            sn_list[epoch][instance].append(sn)
 #%% Simulation of SNN in time-major order
 
 ## Processing spikes in the network
-fired_synapse_list = [[[] for row in range(0, sn.duration, sn.dt)] for epoch in range(num_epochs)]
-fired_neuron_list = [[[] for row in range(0, sn.duration, sn.dt)] for epoch in range(num_epochs)]
-                
+fired_synapse_list =    [
+                            [   
+                                [
+                                    [] for step in range(0, sn.duration, sn.dt)
+                                ]
+                                for instance in range(num_instances)
+                            ] for epoch in range(num_epochs)
+                        ]   # num_epochs x num_instances x num_timesteps x num_fired_synapses
+
+fired_neuron_list =    [
+                            [   
+                                [
+                                    [] for step in range(0, sn.duration, sn.dt)
+                                ]
+                                for instance in range(num_instances)
+                            ] for epoch in range(num_epochs)
+                        ]   # num_epochs x num_instances x num_timesteps x num_fired_neurons
+
 spike_info = [
-                [
-                    {
-                        "fired_synapse_addr": [],
-                        "time"              : None
-                    }
-                    for row in range(0, sn.duration, sn.dt)
+                [   
+                    [
+                        {    
+                            "fired_synapse_addr": [],
+                            "time"              : None
+                        }
+                        for step in range(0, sn.duration, sn.dt)
+                    ] for instance in range(num_instances)
                 ] for epoch in range(num_epochs)
              ]            
              # a list of dictionaries sorted by time steps
 
-# for epoch in range(num_epochs):
+## Initialize statistics
+first_to_fire_class =  [
+                            [None for instance in range(num_instances)]
+                            for epoch in range(num_epochs)
+                        ]
+
+inference_correct =     [
+                            [    
+                                None for instance in range(num_instances) 
+                            ] for epoch in range(num_epochs)
+                        ]   # num_epochs x num_instances
+
+temporal_diff =         [
+                            [    
+                                None for instance in range(num_instances) 
+                            ] for epoch in range(num_epochs)
+                        ]   # num_epochs x num_instances x num_output_neurons
+                            # out-spike time - desired spike time 
+
+temporal_diff_stats =   [
+                            [    
+                                [None] * num_neurons_perLayer[-1] 
+                            ] for epoch in range(num_epochs)
+                        ]   # num_epochs x num_output_neurons
+
+
+## Training Loop
 for epoch in range(num_epochs):
     print("********************************Beginning of Epoch {}!***********************".format(epoch))
-    for sim_point in range(0, sn.duration, sn.dt):
-        # first check if any input synpase fires at this time step
-        if sim_point in stimulus_time_vector[epoch]:
-            fired_synapse_list[epoch][sim_point].append(stimulus_time_vector[epoch].index(sim_point))
-            spike_info[epoch][sim_point]["fired_synapse_addr"].append(stimulus_time_vector[epoch].index(sim_point))
+    for instance in range(num_instances):
+        print("---------------Instance {} {} -----------------".format(instance,stimulus_time_vector[epoch][instance]["in_pattern"]))
+        for sim_point in range(0, sn.duration, sn.dt):
+            # first check if any input synpase fires at this time step
+            if sim_point in stimulus_time_vector[epoch][instance]["in_latency"]:
+                fired_synapse_list[epoch][instance][sim_point].extend(
+                    index_duplicate(stimulus_time_vector[epoch][instance]["in_latency"], sim_point)
+                )
+                spike_info[epoch][instance][sim_point]["fired_synapse_addr"].extend(
+                    index_duplicate(stimulus_time_vector[epoch][instance]["in_latency"], sim_point)
+                )
 
-        spike_info[epoch][sim_point]["time"] = sim_point
-        
-        for i in neuron_idx:
-            # check if the neuron being updated is in the output layer
-            sn_list[epoch][i].accumulate(sim_point=sim_point, 
-                                    spike_in_info=spike_info[epoch][sim_point], 
-                                    WeightRAM_inst=WeightRAM,
-                                    debug_mode=debug_mode,
-                                    epoch=epoch
-                                    )                               
-            # upadate the current potential to PotentialRAM
-            PotentialRAM.potential[epoch][i] = sn_list[epoch][i].v[sim_point]
+            spike_info[epoch][instance][sim_point]["time"] = sim_point
             
-            # update the list of synapses that fired during at this sim_point
-            if (sn_list[epoch][i].fire_cnt != -1):
-                if (sn_list[epoch][i].spike_out_info[sn_list[epoch][i].fire_cnt]["time"] == sim_point):
-                    if (len(sn_list[epoch][i].fan_out_synapse_addr) == 1):
-                        fired_synapse_list[epoch][sim_point].append(val)
-                        spike_info[epoch][sim_point]["fired_synapse_addr"].append(val)
-                    else:
-                        for key,val in enumerate(sn_list[epoch][i].fan_out_synapse_addr):
-                            fired_synapse_list[epoch][sim_point].append(val)
-                            spike_info[epoch][sim_point]["fired_synapse_addr"].append(val)
-                    
-                    fired_neuron_list[epoch][sim_point].append(sn_list[epoch][i].neuron_idx)
+            for i in neuron_idx:
+                # check if the neuron being updated is in the output layer
+                sn_list[epoch][instance][i].accumulate(sim_point=sim_point, 
+                                        spike_in_info=spike_info[epoch][instance][sim_point], 
+                                        WeightRAM_inst=WeightRAM,
+                                        debug_mode=debug_mode,
+                                        epoch=epoch,
+                                        instance=instance
+                                        )                               
+                # upadate the current potential to PotentialRAM
+                PotentialRAM.potential[epoch][instance][i] = sn_list[epoch][instance][i].v[sim_point]
+                
+                # update the list of synapses that fired at this sim_point
+                if (sn_list[epoch][instance][i].fire_cnt != -1):
+                    if (sn_list[epoch][instance][i].spike_out_info[sn_list[epoch][instance][i].fire_cnt]["time"] == sim_point):
+                        if (len(sn_list[epoch][instance][i].fan_out_synapse_addr) == 1): # if its an inner-layer neuron
+                            fired_synapse_list[epoch][instance][sim_point].append(val)
+                            spike_info[epoch][instance][sim_point]["fired_synapse_addr"].append(val)
+                        else:
+                            for key,val in enumerate(sn_list[epoch][instance][i].fan_out_synapse_addr):
+                                fired_synapse_list[epoch][instance][sim_point].append(val)
+                                spike_info[epoch][instance][sim_point]["fired_synapse_addr"].append(val)
+                        
+                        fired_neuron_list[epoch][instance][sim_point].append(sn_list[epoch][instance][i].neuron_idx)
+                        # update first_to_fire_neuron during after this training instance
+                        if (sn_list[epoch][instance][i].layer_idx == num_layers-1 and 
+                            first_to_fire_class[epoch][instance] == None):
+                            first_to_fire_class[epoch][instance] = \
+                                sn_list[epoch][instance][i].neuron_idx - sum(num_neurons_perLayer[0:-1])
+                            temporal_diff[epoch][instance] = sim_point - \
+                                desired_out_time_vector[epoch][instance]["out_latency"][first_to_fire_class[epoch][instance]]
+
+        # append statistics at the end of the training instance
+        if first_to_fire_class[epoch][instance] == desired_out_time_vector[epoch][instance]["class_num"]:
+            inference_correct[epoch][instance] = 1
+        else:
+            inference_correct[epoch][instance] = 0
+
+        print("-------------------------------------------------\n")
     print("********************************End of Epoch {}!***********************\n\n".format(epoch))
 
-print("End of Program!")
+print(inference_correct)
 
 if plot_response:
-    plotNeuronResponse_iterative(sn_list=sn_list, epochs_list=[0,num_layers-1], only_output_layer=1)
+    plotNeuronResponse_iterative(sn_list=sn_list, epochs_list=[num_epochs-1], instance_list = [num_instances-1], only_output_layer=1)
     plt.show()
+
+print("End of Program!")

@@ -41,8 +41,8 @@ class PotentialRAM:  # indexed by neuron_idx
         self.potential =    [  
                                 [
                                     [0 for neurons in range(num_neurons)] 
-                                    for instance in range(num_epochs)
-                                ] for epochs in num_epochs  
+                                    for instance in range(num_instances)
+                                ] for epochs in range(num_epochs)  
                             ]
         self.fan_out_synapse_addr = [
                                         [None for col in range(max_num_connections)] 
@@ -72,7 +72,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         self.tau_u = tau_u                  # current decay constant, in units of time step
         self.tau_v = tau_v                  # potential decay constant, in units of time step
         self.threshold = threshold          # potential threshold
-        self.spike_out_time_d_list = spike_out_time_d_list    # a list of size 1 x num_epochs
+        self.spike_out_time_d_list = spike_out_time_d_list    # a list of size num_epochs x num_instances x 1
         self.last_spike_in_info = []        # the last in-spike that contributed to the output spike
         self.oldWeight = []                 # the weight(s) that are associated with the last in-spike that causes the out-spike 
         self.spike_out_info = []            # output spike time info
@@ -80,6 +80,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         self.max_num_fires = max_num_fires  # the maximum number a neuron can fire
         self.training_on = training_on
         self.relavent_fan_in_addr = []
+        self.causal_fan_in_addr = []
 
     def fetchWeight(self, WeightRAM_inst, fired_synapse_addr):
         # fired_in_synapse_addr is a list of integer(s)
@@ -89,16 +90,16 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         if (len(self.relavent_fan_in_addr) != len(newWeight)):
             print(
                 "Error: length of relavent_fan_in_addr {} does not match length of newWeight vector {}!"
-                .format(len(self.relavent_fan_in_addr), len(newWeight)))
+                .format(len(self.causal_fan_in_addr), len(newWeight)))
             exit(1)
-        for idx, update_addr in enumerate(self.relavent_fan_in_addr):
+        for idx, update_addr in enumerate(self.causal_fan_in_addr):
             # find matching fan-in addresses to update
             matched_addr = WeightRAM_inst.synapse_addr.index(update_addr)
             WeightRAM_inst.weight[matched_addr] = newWeight[idx]
 
     # right now ReSuMe_training is only handling one desired out-spike time per output neuron 
-    def ReSuMe_training(self, sim_point, spike_in_time, spike_out_time, epoch, 
-                        spike_out_time_d, oldWeight,
+    def ReSuMe_training(self, sim_point, spike_in_time, spike_out_time, epoch, instance,
+                        spike_out_time_d, oldWeight, causal_fan_in_addr,
                         kernel="exponential",
                         a_d=0, A_di=8, tau=9, debug=1):
         # applied only on the snypatic weights attached to neurons in the output layer
@@ -149,8 +150,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     deltaWeight = -(a_d + deltaWeight_Hebbian)
                     newWeight[i] = oldWeight[i] + deltaWeight
                     if debug:
-                        print("Epoch {}: Updated oldWeight: {} to newWeight: {} on Neuron {} upon out-spike at time {}"
-                                .format(epoch, oldWeight[i], newWeight[i], self.neuron_idx, sim_point))
+                        print("Epoch {} Instance {}: Updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}"
+                                .format(epoch, instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, sim_point))
            
             ## update upon desired-spike
                 elif sim_point == spike_out_time_d:
@@ -160,22 +161,22 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     deltaWeight = +(a_d + deltaWeight_Hebbian)
                     newWeight[i] = oldWeight[i] + deltaWeight
                     if debug:
-                        print("Epoch {}: Updated oldWeight: {} to newWeight: {} on Neuron {} upon desired spike at time {}"
-                                .format(epoch, oldWeight[i], newWeight[i], self.neuron_idx, sim_point))
+                        print("Epoch {} Instance {}: Updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon desired spike at time {}"
+                                .format(epoch, instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, sim_point))
                 else:
-                    print("Epoch {}: Warning: During training on neuron {}, spike_out_time {} and spike_out_time_d {} has unclear relationship"
-                            .format(epoch, self.neuron_idx, spike_out_time, spike_out_time_d))  
+                    print("Epoch {} Instance{}: Warning: During training on neuron {}, spike_out_time {} and spike_out_time_d {} has unclear relationship"
+                            .format(epoch, instance, self.neuron_idx, spike_out_time, spike_out_time_d))  
         else:
             newWeight = oldWeight[:]
             if debug:
-                print("Epoch {}: Neuron {} fired at exactly the desired spike time {}"
-                        .format(epoch, self.neuron_idx, sim_point))
+                print("Epoch {} Instance{}: Neuron {} fired at exactly the desired spike time {}"
+                        .format(epoch, instance, self.neuron_idx, sim_point))
         
         return newWeight         
         
 
 
-    def accumulate(self, sim_point, spike_in_info, WeightRAM_inst, epoch, debug_mode=0, 
+    def accumulate(self, sim_point, spike_in_info, WeightRAM_inst, epoch, instance, debug_mode=0, 
                    kernel="exponential", a_d=0, A_di=8, tau=9):     
         # spike_in_info is the data transmitted between neurons: (a dictionary)
         #   spike_in_info["fired_synapse_addr"] (a list of int)
@@ -210,13 +211,9 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 # and the associated weights for weight updates
                 self.relavent_fan_in_addr = relavent_fan_in_addr
                 self.last_spike_in_info = spike_in_info 
-                self.oldWeight = weight
-
-                # DELETE: for debug purposes #
-                if self.layer_idx == 2:
-                    print("\nEpoch {}: Neuron {} at Layer {} has updated its oldWeight to {} at step {}\n"
-                            .format(epoch, self.neuron_idx, self.layer_idx, self.oldWeight, sim_point))
-
+                if len(self.causal_fan_in_addr) == 0:
+                    # update oldWeight only if causal input has not been determined 
+                    self.oldWeight = weight
 
                 self.u[sim_point] = (1 - dt/self.tau_u) * self.u[sim_point-1] + sum(weight) * dt
             else:
@@ -247,18 +244,24 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 self.spike_out_info.append(spike_out_entry)
                 self.fire_cnt += 1
                 if debug_mode:
-                    print("Epoch {}: Neuron {} at Layer{} has fired {} times at step {}"
-                        .format(epoch, self.neuron_idx, self.layer_idx,self.fire_cnt + 1, [entry["time"] for entry in self.spike_out_info]))
+                    print("Epoch {} Instance {}: Neuron {} at Layer{} has fired {} times at step {}"
+                        .format(epoch, instance, self.neuron_idx, self.layer_idx,self.fire_cnt + 1, [entry["time"] for entry in self.spike_out_info]))
             
                 # if training is turned on, update synaptic weight 
                 if self.training_on == 1:
-                    spike_out_time_d = self.spike_out_time_d_list[epoch]
+                    spike_out_time_d = self.spike_out_time_d_list[epoch][instance][0]
+                    
+                    if len(self.causal_fan_in_addr) == 0:
+                        self.causal_fan_in_addr = self.relavent_fan_in_addr
+
                     newWeight = SpikingNeuron.ReSuMe_training(self, sim_point=sim_point,
                                                 spike_in_time=self.last_spike_in_info["time"],
                                                 spike_out_time = self.spike_out_info[0]["time"],    # assume max_spike_num = 1
                                                 spike_out_time_d = spike_out_time_d,
                                                 epoch = epoch,
+                                                instance = instance,
                                                 oldWeight = self.oldWeight,
+                                                causal_fan_in_addr=self.causal_fan_in_addr,
                                                 kernel=kernel, a_d=a_d, A_di=A_di, tau=tau
                                                 )
                     SpikingNeuron.updateWeight(self, WeightRAM_inst, newWeight)
@@ -266,38 +269,46 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         
         # update synaptic weight upon desired spike
         if self.training_on == 1:
-            spike_out_time_d = self.spike_out_time_d_list[epoch]
+            spike_out_time_d = self.spike_out_time_d_list[epoch][instance][0]
 
             if sim_point == spike_out_time_d:    
                 # check if self.last_spike_in_info is empty;
                 # if yes then indicates the output-layer neuron has not even recieved inputs yet
                 if len(self.last_spike_in_info) == 0:
-                    print("Epoch {}: Error when training Neuron {} at time {}; the desired spike time precedes its inputs!"
-                        .format(epoch, sim_point, self.neuron_idx))
+                    print("Epoch {} Instance {}: Error when training Neuron {} at time {}; the desired spike time precedes its inputs!"
+                        .format(epoch, instance, self.neuron_idx, sim_point))
                     exit(1)
 
-                # check if the neuron has fired
-                if self.fire_cnt != -1:
-                    newWeight = SpikingNeuron.ReSuMe_training(self, sim_point=sim_point,
-                                                spike_in_time=self.last_spike_in_info["time"],
-                                                spike_out_time =self.spike_out_info[0]["time"],     # assume max_spike_num = 1
-                                                spike_out_time_d = spike_out_time_d,
-                                                epoch = epoch,
-                                                oldWeight = self.oldWeight,
-                                                kernel=kernel, a_d=a_d, A_di=A_di, tau=tau
-                                                )
                 else:
-                    newWeight = SpikingNeuron.ReSuMe_training(self, sim_point=sim_point,
-                                                spike_in_time=self.last_spike_in_info["time"],
-                                                spike_out_time=None,     
-                                                spike_out_time_d = spike_out_time_d,
-                                                epoch = epoch,
-                                                oldWeight = self.oldWeight,
-                                                kernel=kernel, a_d=a_d, A_di=A_di, tau=tau
-                                                )
+                    # check if the neuron has fired
+                    if self.fire_cnt != -1:
+                        # desired spike lags out-spike
+                        newWeight = SpikingNeuron.ReSuMe_training(self, sim_point=sim_point,
+                                                    spike_in_time=self.last_spike_in_info["time"],
+                                                    spike_out_time =self.spike_out_info[0]["time"],     # assume max_spike_num = 1
+                                                    spike_out_time_d = spike_out_time_d,
+                                                    epoch = epoch,
+                                                    instance = instance,
+                                                    oldWeight = self.oldWeight,
+                                                    causal_fan_in_addr=self.causal_fan_in_addr,
+                                                    kernel=kernel, a_d=a_d, A_di=A_di, tau=tau
+                                                    )
+                    else:
+                        # desired spike precedes out-spike
+                        self.causal_fan_in_addr = self.relavent_fan_in_addr 
+                        newWeight = SpikingNeuron.ReSuMe_training(self, sim_point=sim_point,
+                                                    spike_in_time=self.last_spike_in_info["time"],
+                                                    spike_out_time=None,     
+                                                    spike_out_time_d = spike_out_time_d,
+                                                    epoch = epoch,
+                                                    instance = instance,
+                                                    oldWeight = self.oldWeight,
+                                                    causal_fan_in_addr=self.causal_fan_in_addr,
+                                                    kernel=kernel, a_d=a_d, A_di=A_di, tau=tau
+                                                    )
 
-                SpikingNeuron.updateWeight(self, WeightRAM_inst, newWeight)
-                self.oldWeight = newWeight[:]
+                    SpikingNeuron.updateWeight(self, WeightRAM_inst, newWeight)
+                    self.oldWeight = newWeight[:]
             
                     
 

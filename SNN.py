@@ -87,9 +87,9 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         return [WeightRAM_inst.weight[i] for i in fired_synapse_addr]
 
     def updateWeight(self, WeightRAM_inst, newWeight):
-        if (len(self.relavent_fan_in_addr) != len(newWeight)):
+        if (len(self.causal_fan_in_addr) != len(newWeight)):
             print(
-                "Error: length of relavent_fan_in_addr {} does not match length of newWeight vector {}!"
+                "Error: length of causal_fan_in_addr (len={}) does not match length of newWeight vector (len={})!"
                 .format(len(self.causal_fan_in_addr), len(newWeight)))
             exit(1)
         for idx, update_addr in enumerate(self.causal_fan_in_addr):
@@ -99,8 +99,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
 
     # right now ReSuMe_training is only handling one desired out-spike time per output neuron 
     def ReSuMe_training(self, sim_point, spike_in_time, spike_out_time, epoch, instance,
-                        spike_out_time_d, oldWeight, causal_fan_in_addr,
-                        kernel="exponential",
+                        spike_out_time_d, oldWeight, causal_fan_in_addr, f_handle,
+                        kernel="exponential", 
                         a_d=0, A_di=8, tau=9, debug=1):
         # applied only on the snypatic weights attached to neurons in the output layer
 
@@ -150,7 +150,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     deltaWeight = -(a_d + deltaWeight_Hebbian)
                     newWeight[i] = oldWeight[i] + deltaWeight
                     if debug:
-                        print("Epoch {} Instance {}: Updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}"
+                        f_handle.write("Epoch {} Instance {}: Updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
                                 .format(epoch, instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, sim_point))
            
             ## update upon desired-spike
@@ -161,7 +161,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     deltaWeight = +(a_d + deltaWeight_Hebbian)
                     newWeight[i] = oldWeight[i] + deltaWeight
                     if debug:
-                        print("Epoch {} Instance {}: Updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon desired spike at time {}"
+                        f_handle.write("Epoch {} Instance {}: Updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon desired spike at time {}\n"
                                 .format(epoch, instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, sim_point))
                 else:
                     print("Epoch {} Instance{}: Warning: During training on neuron {}, spike_out_time {} and spike_out_time_d {} has unclear relationship"
@@ -169,14 +169,14 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         else:
             newWeight = oldWeight[:]
             if debug:
-                print("Epoch {} Instance{}: Neuron {} fired at exactly the desired spike time {}"
+                f_handle.write("Epoch {} Instance{}: Neuron {} fired at exactly the desired spike time {}\n"
                         .format(epoch, instance, self.neuron_idx, sim_point))
         
         return newWeight         
         
 
 
-    def accumulate(self, sim_point, spike_in_info, WeightRAM_inst, epoch, instance, debug_mode=0, 
+    def accumulate(self, sim_point, spike_in_info, WeightRAM_inst, epoch, instance, f_handle, debug_mode=0,
                    kernel="exponential", a_d=0, A_di=8, tau=9):     
         # spike_in_info is the data transmitted between neurons: (a dictionary)
         #   spike_in_info["fired_synapse_addr"] (a list of int)
@@ -244,7 +244,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 self.spike_out_info.append(spike_out_entry)
                 self.fire_cnt += 1
                 if debug_mode:
-                    print("Epoch {} Instance {}: Neuron {} at Layer{} has fired {} times at step {}"
+                    f_handle.write("Epoch {} Instance {}: Neuron {} at Layer{} has fired {} times at step {}\n"
                         .format(epoch, instance, self.neuron_idx, self.layer_idx,self.fire_cnt + 1, [entry["time"] for entry in self.spike_out_info]))
             
                 # if training is turned on, update synaptic weight 
@@ -260,6 +260,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                                 spike_out_time_d = spike_out_time_d,
                                                 epoch = epoch,
                                                 instance = instance,
+                                                f_handle=f_handle,
                                                 oldWeight = self.oldWeight,
                                                 causal_fan_in_addr=self.causal_fan_in_addr,
                                                 kernel=kernel, a_d=a_d, A_di=A_di, tau=tau
@@ -275,7 +276,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 # check if self.last_spike_in_info is empty;
                 # if yes then indicates the output-layer neuron has not even recieved inputs yet
                 if len(self.last_spike_in_info) == 0:
-                    print("Epoch {} Instance {}: Error when training Neuron {} at time {}; the desired spike time precedes its inputs!"
+                    print("Epoch {} Instance {}: Error when training Neuron {} at time {}; the desired spike time precedes its inputs!\n"
                         .format(epoch, instance, self.neuron_idx, sim_point))
                     exit(1)
 
@@ -289,6 +290,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                                     spike_out_time_d = spike_out_time_d,
                                                     epoch = epoch,
                                                     instance = instance,
+                                                    f_handle = f_handle,
                                                     oldWeight = self.oldWeight,
                                                     causal_fan_in_addr=self.causal_fan_in_addr,
                                                     kernel=kernel, a_d=a_d, A_di=A_di, tau=tau
@@ -302,6 +304,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                                     spike_out_time_d = spike_out_time_d,
                                                     epoch = epoch,
                                                     instance = instance,
+                                                    f_handle = f_handle,
                                                     oldWeight = self.oldWeight,
                                                     causal_fan_in_addr=self.causal_fan_in_addr,
                                                     kernel=kernel, a_d=a_d, A_di=A_di, tau=tau

@@ -6,7 +6,7 @@ from operator import itemgetter
 from pandas import DataFrame
 
 
-
+f_handle = open("dumpsim.txt", "w+")
 #%% Defined Functions 
 def index_duplicate (seq, item):
     start_at = -1
@@ -65,13 +65,13 @@ num_neurons_perLayer = [2,4,2]                           # Assuming num_neurons_
 max_num_fires = 1
 
 ## Specify common Spiking Neuron Parameters
-duration = 250
+duration = 200
 tau_u = 16      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 threshold = 120
 
 num_epochs = 1                 # number of epochs
-num_instances = 400              # number of training instances per epoch
+num_instances = 1              # number of training instances per epoch
 ## Define Input & Output Patterns
 input_pattern = \
     {
@@ -83,8 +83,8 @@ input_pattern = \
 
 output_pattern = \
     {
-        "0"     :   [110, 200],     # class 0 neuron fires first
-        "1"     :   [200, 110]      # class 1 neuron fires first
+        "0"     :   [110, 150],     # class 0 neuron fires first
+        "1"     :   [150, 110]      # class 1 neuron fires first
     }
 
 input_output_map = \
@@ -107,8 +107,10 @@ stimulus_time_vector = [
                        ]
 for epoch in range (num_epochs):
     for instance in range(num_instances):
+        # stimulus_time_vector[epoch][instance]["in_pattern"] = \
+        #         random.choice(list(input_pattern.keys()))
         stimulus_time_vector[epoch][instance]["in_pattern"] = \
-                random.choice(list(input_pattern.keys()))
+                "11"
         stimulus_time_vector[epoch][instance]["in_latency"] = \
 input_pattern[stimulus_time_vector[epoch][instance]["in_pattern"]]
 
@@ -229,16 +231,21 @@ for layer in range (num_layers):
         last_layer_last_synapse = synapse_addr[last_layer_last_synapse + (neuron+1)*num_neurons_perLayer[layer-1]]
 
 ## Initialize WeightRAM -- a class with list attributes sorted/indexed by fan_in_synapse_addr; its contents are weight & neuron_idx
-weight_vector = [initial_weight] * num_synapses
+# weight_vector = [initial_weight] * num_synapses
+weight_vector = [
+                    8, 8,
+                    6, 6, 10, 0, 0, 10, 6, 6,
+                    8, 8, 8, 8, 8, 8, 8, 8
+                ]   
 WeightRAM = SNN.WeightRAM(num_synapses)
 for i in synapse_addr:
     neuron_idx_WRAM, connection_num = index_2d(ConnectivityTable.fan_in_synapse_addr,synapse_addr[i])
     num_fan_in = len([fan_in for fan_in in ConnectivityTable.fan_in_synapse_addr[neuron_idx_WRAM] if fan_in is not None]) 
     # if hidden layer, de-uniformize fan-in weights
-    if ConnectivityTable.layer_num[neuron_idx_WRAM] == num_layers - 2:
-        # weight_vector[i] = int(weight_vector[i] / num_fan_in)
-        first_idx_hidden_layer = num_neurons_perLayer[0]
-        weight_vector[i] = weight_vector[i] - (neuron_idx_WRAM - first_idx_hidden_layer) * 2
+    # if ConnectivityTable.layer_num[neuron_idx_WRAM] == num_layers - 2:
+    #     # weight_vector[i] = int(weight_vector[i] / num_fan_in)
+    #     first_idx_hidden_layer = num_neurons_perLayer[0]
+    #     weight_vector[i] = weight_vector[i] - (neuron_idx_WRAM - first_idx_hidden_layer) * 2
     WeightRAM.neuron_idx[i] = neuron_idx_WRAM
     WeightRAM.weight[i] = weight_vector[i]
 
@@ -351,9 +358,9 @@ temporal_diff_stats =   [
 
 ## Training Loop
 for epoch in range(num_epochs):
-    print("********************************Beginning of Epoch {}!***********************".format(epoch))
+    f_handle.write("********************************Beginning of Epoch {}!***********************\n".format(epoch))
     for instance in range(num_instances):
-        print("---------------Instance {} {} -----------------".format(instance,stimulus_time_vector[epoch][instance]["in_pattern"]))
+        f_handle.write("---------------Instance {} {} -----------------\n".format(instance,stimulus_time_vector[epoch][instance]["in_pattern"]))
         for sim_point in range(0, sn.duration, sn.dt):
             # first check if any input synpase fires at this time step
             if sim_point in stimulus_time_vector[epoch][instance]["in_latency"]:
@@ -373,7 +380,8 @@ for epoch in range(num_epochs):
                                         WeightRAM_inst=WeightRAM,
                                         debug_mode=debug_mode,
                                         epoch=epoch,
-                                        instance=instance
+                                        instance=instance,
+                                        f_handle=f_handle
                                         )                               
                 # upadate the current potential to PotentialRAM
                 PotentialRAM.potential[epoch][instance][i] = sn_list[epoch][instance][i].v[sim_point]
@@ -404,13 +412,23 @@ for epoch in range(num_epochs):
         else:
             inference_correct[epoch][instance] = 0
 
-        print("-------------------------------------------------\n")
-    print("********************************End of Epoch {}!***********************\n\n".format(epoch))
+        f_handle.write("-------------------------------------------------\n")
+    f_handle.write("********************************End of Epoch {}!***********************\n\n".format(epoch))
 
-print(inference_correct)
+f_handle.write("{}\n\n".format(inference_correct))
+print("{}\n".format(inference_correct))
+#%% Dump initial weight vector and final weightRAM
+f_handle.write("***************************Weight Change*********************\n")
+f_handle.write("Synapse\t\t InitialWeight\t\t FinalWeight\t\t\n")
 
+for synapse_addr in WeightRAM.synapse_addr:
+    f_handle.write("{}\t\t {}\t\t\t {}\t\t\n"
+                .format(synapse_addr, weight_vector[synapse_addr], WeightRAM.weight[synapse_addr]))
+f_handle.write("************************************************************\n")
+f_handle.close()
+
+#%%
 if plot_response:
-    plotNeuronResponse_iterative(sn_list=sn_list, epochs_list=[num_epochs-1], instance_list = [num_instances-1], only_output_layer=1)
+    plotNeuronResponse_iterative(sn_list=sn_list, epochs_list=[num_epochs-1], instance_list = [num_instances-1], only_output_layer=0)
     plt.show()
-
 print("End of Program!")

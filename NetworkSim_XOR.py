@@ -71,20 +71,21 @@ tau_v = None     # in units with respect to duration
 threshold = 120
 
 num_epochs = 1                 # number of epochs
-num_instances = 1              # number of training instances per epoch
+num_instances = 20             # number of training instances per epoch
+stop_num = 20
 ## Define Input & Output Patterns
 input_pattern = \
     {
         "00"    :   [0, 0],
-        "01"    :   [0, 50],
+        "01"    :   [0, 50],        # 3*tau_u
         "10"    :   [50, 0],
         "11"    :   [50, 50]
     }
 
 output_pattern = \
     {
-        "0"     :   [110, 150],     # class 0 neuron fires first
-        "1"     :   [150, 110]      # class 1 neuron fires first
+        "0"     :   [90, 200],     # class 0 neuron fires first 
+        "1"     :   [200, 90]      # class 1 neuron fires first
     }
 
 input_output_map = \
@@ -107,10 +108,10 @@ stimulus_time_vector = [
                        ]
 for epoch in range (num_epochs):
     for instance in range(num_instances):
-        # stimulus_time_vector[epoch][instance]["in_pattern"] = \
-        #         random.choice(list(input_pattern.keys()))
         stimulus_time_vector[epoch][instance]["in_pattern"] = \
-                "11"
+                random.choice(list(input_pattern.keys()))
+        # stimulus_time_vector[epoch][instance]["in_pattern"] = \
+        #         "11"
         stimulus_time_vector[epoch][instance]["in_latency"] = \
 input_pattern[stimulus_time_vector[epoch][instance]["in_pattern"]]
 
@@ -232,20 +233,36 @@ for layer in range (num_layers):
 
 ## Initialize WeightRAM -- a class with list attributes sorted/indexed by fan_in_synapse_addr; its contents are weight & neuron_idx
 # weight_vector = [initial_weight] * num_synapses
+# weight_vector = [
+#                     10, 10,
+#                     8, 8, 10, 0, 0, 10, 8, 8,
+#                     10, 10, 10, 10, 10, 10, 10, 10
+#                 ]  
+
 weight_vector = [
-                    8, 8,
-                    6, 6, 10, 0, 0, 10, 6, 6,
-                    8, 8, 8, 8, 8, 8, 8, 8
-                ]   
+                    10, 10,
+                    15, 15, 10, -15, -15, 10, 15, 15,
+                    10, 10, 10, 10, 10, 10, 10, 10
+                ] 
+
+# weight_vector = [
+#                     10, 10,
+#                     15, 15, 10, -15, -15, 10, 15, 15,
+#                     5, -4, -4, 5, 3, 2, 2, 3
+#                 ]     # one set that works under threshold 120, output pattern [80,150]
+
+# weight_vector = [
+#                     10, 10,
+#                     15, 15, 10, -15, -15, 10, 15, 15,
+#                     4, -4, -3, 4, 3, 2, 2, 3
+#                 ]    # another set that works under threshold 120, output pattern [80,150]
+
+
 WeightRAM = SNN.WeightRAM(num_synapses)
 for i in synapse_addr:
     neuron_idx_WRAM, connection_num = index_2d(ConnectivityTable.fan_in_synapse_addr,synapse_addr[i])
     num_fan_in = len([fan_in for fan_in in ConnectivityTable.fan_in_synapse_addr[neuron_idx_WRAM] if fan_in is not None]) 
     # if hidden layer, de-uniformize fan-in weights
-    # if ConnectivityTable.layer_num[neuron_idx_WRAM] == num_layers - 2:
-    #     # weight_vector[i] = int(weight_vector[i] / num_fan_in)
-    #     first_idx_hidden_layer = num_neurons_perLayer[0]
-    #     weight_vector[i] = weight_vector[i] - (neuron_idx_WRAM - first_idx_hidden_layer) * 2
     WeightRAM.neuron_idx[i] = neuron_idx_WRAM
     WeightRAM.weight[i] = weight_vector[i]
 
@@ -283,10 +300,16 @@ for epoch in range(num_epochs):
                                     threshold=threshold,
                                     duration=duration,
                                     max_num_fires=max_num_fires,
+                                    training_on=0,
+                                    supervised=0
                                     )
+            # chekc if neuron in in the input layer
+            if sn.layer_idx == 0:
+                sn.training_on = 0
             # check if neuron is in the output layer 
             if sn.layer_idx == num_layers - 1:
-                sn.training_on = 1
+                sn.training_on = 0
+                sn.supervised = 1
                 sn.spike_out_time_d_list =  [
                                                 [
                                                     [desired_out_time_vector[epoch][instance]["out_latency"][output_layer_idx]]
@@ -342,6 +365,7 @@ inference_correct =     [
                             ] for epoch in range(num_epochs)
                         ]   # num_epochs x num_instances
 
+
 temporal_diff =         [
                             [    
                                 None for instance in range(num_instances) 
@@ -359,6 +383,7 @@ temporal_diff_stats =   [
 ## Training Loop
 for epoch in range(num_epochs):
     f_handle.write("********************************Beginning of Epoch {}!***********************\n".format(epoch))
+    correct_cnt = 0
     for instance in range(num_instances):
         f_handle.write("---------------Instance {} {} -----------------\n".format(instance,stimulus_time_vector[epoch][instance]["in_pattern"]))
         for sim_point in range(0, sn.duration, sn.dt):
@@ -399,20 +424,29 @@ for epoch in range(num_epochs):
                         
                         fired_neuron_list[epoch][instance][sim_point].append(sn_list[epoch][instance][i].neuron_idx)
                         # update first_to_fire_neuron during after this training instance
-                        if (sn_list[epoch][instance][i].layer_idx == num_layers-1 and 
-                            first_to_fire_class[epoch][instance] == None):
-                            first_to_fire_class[epoch][instance] = \
-                                sn_list[epoch][instance][i].neuron_idx - sum(num_neurons_perLayer[0:-1])
-                            temporal_diff[epoch][instance] = sim_point - \
-                                desired_out_time_vector[epoch][instance]["out_latency"][first_to_fire_class[epoch][instance]]
+                        if (sn_list[epoch][instance][i].layer_idx == num_layers-1): 
+                            if (first_to_fire_class[epoch][instance] == None):    
+                                first_to_fire_class[epoch][instance] = \
+                                    sn_list[epoch][instance][i].neuron_idx - sum(num_neurons_perLayer[0:-1])
+                                temporal_diff[epoch][instance] = sim_point - \
+                                    desired_out_time_vector[epoch][instance]["out_latency"][first_to_fire_class[epoch][instance]]
+                            else:   # there are classes that fire at the same time
+                                first_to_fire_class[epoch][instance] = num_neurons_perLayer[-1]
 
         # append statistics at the end of the training instance
         if first_to_fire_class[epoch][instance] == desired_out_time_vector[epoch][instance]["class_num"]:
             inference_correct[epoch][instance] = 1
+            correct_cnt += 1
         else:
             inference_correct[epoch][instance] = 0
-
+            correct_cnt = 0
+        f_handle.write("Succesive correct count: {}\n".format(correct_cnt))
         f_handle.write("-------------------------------------------------\n")
+
+        if correct_cnt == stop_num:
+            print("Supervised Training stops at Epoch {} Instance {} because succesive correct count has reached {}"
+                    .format(epoch, instance, correct_cnt))
+            break
     f_handle.write("********************************End of Epoch {}!***********************\n\n".format(epoch))
 
 f_handle.write("{}\n\n".format(inference_correct))

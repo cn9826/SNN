@@ -58,6 +58,10 @@ def plotNeuronResponse_iterative(sn_list, epochs_list, instance_list, only_outpu
                     if sn_list[epoch][instance][i].layer_idx == num_layers - 1:
                         plotNeuronResponse(sn_list[epoch][instance][i])
 
+def randomInt(mean, std, num):
+    value_array = np.random.normal(mean,std,num)
+    value_list = [int(value) for value in value_array]
+    return value_list
 #%% Initializations of Tables and Objects and Lists of Objects
 #####################################################################################################################
 ## Specify Global Connectivity Parmeters
@@ -71,8 +75,8 @@ tau_v = None     # in units with respect to duration
 threshold = 120
 
 num_epochs = 1                 # number of epochs
-num_instances = 1000             # number of training instances per epoch
-stop_num = 14
+num_instances =20             # number of training instances per epoch
+stop_num = 20
 coarse_fine_ratio=0.5
 ## Define Input & Output Patterns
 input_pattern = \
@@ -238,7 +242,14 @@ for layer in range (num_layers):
 #                     10, 10,
 #                     8, 8, 10, 0, 0, 10, 8, 8,
 #                     10, 10, 10, 10, 10, 10, 10, 10
-#                 ]  
+#                 ]     # used for unsupervised STDP initialization
+
+# randomIntList=randomInt(8,3,8)
+# weight_vector = [
+#                     10, 10,
+#                     *randomIntList,
+#                     10, 10, 10, 10, 10, 10, 10, 10
+#                 ]     # used for unsupervised STDP initialization
 
 weight_vector = [
                     10, 10,
@@ -250,13 +261,32 @@ weight_vector = [
 #                     10, 10,
 #                     15, 15, 10, -15, -15, 10, 15, 15,
 #                     5, -4, -4, 5, 3, 2, 2, 3
-#                 ]     # one set that works under threshold 120, output pattern [80,150]
+#                 ]     # one set that works under threshold 120, output pattern [80,150], tau_coarse = 16, tau_fine = 4
 
 # weight_vector = [
 #                     10, 10,
 #                     15, 15, 10, -15, -15, 10, 15, 15,
 #                     4, -4, -3, 4, 3, 2, 2, 3
-#                 ]    # another set that works under threshold 120, output pattern [80,150]
+#                 ]    # another set that works under threshold 120, output pattern [80,150], tau_coarse = 16, tau_fine = 4
+
+# weight_vector = [
+#                     10, 10,
+#                     15, 15, 10, -15, -15, 10, 15, 15,
+#                     6, -10, -10, 6, 3, 2, 2, 3
+#                 ]    # one set that works under threshold 120, output pattern [80,150], tau_coarse = 50, tau_fine=16
+
+# weight_vector = [
+#                     10, 10,
+#                     15, 15, 10, -15, -15, 10, 15, 15,
+#                     4, -9, -11, 4, 3, 4, 4, 3
+#                 ]    # one set that works under threshold 120, output pattern [80,150], tau_coarse = 50, tau_fine=16
+
+
+# weight_vector = [
+#                     10, 10,
+#                     15, 15, 10, -15, -15, 10, 15, 15,
+#                     4, -1, -1, 4, 2, 4, 4, 2
+#                 ]    # one set that works under threshold 120, output pattern [80,200], tau_coarse = 32
 
 
 WeightRAM = SNN.WeightRAM(num_synapses)
@@ -304,12 +334,12 @@ for epoch in range(num_epochs):
                                     training_on=0,
                                     supervised=0
                                     )
-            # chekc if neuron in in the input layer
+            # chekc if neuron is in the input layer
             if sn.layer_idx == 0:
                 sn.training_on = 0
             # check if neuron is in the output layer 
             if sn.layer_idx == num_layers - 1:
-                sn.training_on = 1
+                sn.training_on = 0
                 sn.supervised = 1
                 sn.spike_out_time_d_list =  [
                                                 [
@@ -436,10 +466,6 @@ for epoch in range(num_epochs):
                             else:   # there are classes that fire at the same time
                                 first_to_fire_class[epoch][instance] = num_neurons_perLayer[-1]
             
-            # if a output neuron has fired once
-            if first_to_fire_class[epoch][instance] != None:
-                break
-
         # append statistics at the end of the training instance
         if first_to_fire_class[epoch][instance] == desired_out_time_vector[epoch][instance]["class_num"]:
             inference_correct[epoch][instance] = 1

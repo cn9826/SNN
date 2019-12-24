@@ -209,11 +209,6 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     print("Epoch {} Instance{}: Warning: During training on neuron {}, spike_out_time {} and spike_out_time_d {} has unclear relationship"
                             .format(epoch, instance, self.neuron_idx, spike_out_time, spike_out_time_d))  
 
-            if debug:
-                f_handle.write("Epoch {} Instance {}: Fine-updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} in fine {}\n"
-                        .format(epoch, instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, sim_point))
-
-
         elif (spike_out_time == spike_out_time_d):
             newWeight = oldWeight[:]
             if debug:
@@ -259,8 +254,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                    successive_correct_cnt,
                    coarse_fine_cut_off,
                    kernel="exponential", 
-                   a_d=0, A_di_coarse=8, tau_coarse=16,
-                   A_di_fine=1, tau_fine=4,
+                   a_d=0, A_di_coarse=8, tau_coarse=50,
+                   A_di_fine=1, tau_fine=16,
                    debug_mode=0
                    ):     
         # spike_in_info is the data transmitted between neurons: (a dictionary)

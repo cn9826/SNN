@@ -71,8 +71,9 @@ tau_v = None     # in units with respect to duration
 threshold = 120
 
 num_epochs = 1                 # number of epochs
-num_instances = 20             # number of training instances per epoch
-stop_num = 20
+num_instances = 1000             # number of training instances per epoch
+stop_num = 14
+coarse_fine_ratio=0.5
 ## Define Input & Output Patterns
 input_pattern = \
     {
@@ -84,8 +85,8 @@ input_pattern = \
 
 output_pattern = \
     {
-        "0"     :   [90, 200],     # class 0 neuron fires first 
-        "1"     :   [200, 90]      # class 1 neuron fires first
+        "0"     :   [80, 150],     # class 0 neuron fires first 
+        "1"     :   [150, 80]      # class 1 neuron fires first
     }
 
 input_output_map = \
@@ -146,7 +147,7 @@ initial_weight = 8
 
 ## Simulation Settings
 debug_mode = 1
-plot_response = 1
+plot_response = 0
 #####################################################################################################################
 if len(stimulus_time_vector) != num_epochs:
     print("Error: Dimension of stimulus does not match the number of epochs!")
@@ -308,7 +309,7 @@ for epoch in range(num_epochs):
                 sn.training_on = 0
             # check if neuron is in the output layer 
             if sn.layer_idx == num_layers - 1:
-                sn.training_on = 0
+                sn.training_on = 1
                 sn.supervised = 1
                 sn.spike_out_time_d_list =  [
                                                 [
@@ -406,7 +407,9 @@ for epoch in range(num_epochs):
                                         debug_mode=debug_mode,
                                         epoch=epoch,
                                         instance=instance,
-                                        f_handle=f_handle
+                                        f_handle=f_handle,
+                                        successive_correct_cnt=correct_cnt,
+                                        coarse_fine_cut_off=stop_num*coarse_fine_ratio
                                         )                               
                 # upadate the current potential to PotentialRAM
                 PotentialRAM.potential[epoch][instance][i] = sn_list[epoch][instance][i].v[sim_point]
@@ -417,7 +420,7 @@ for epoch in range(num_epochs):
                         if (len(sn_list[epoch][instance][i].fan_out_synapse_addr) == 1): # if its an inner-layer neuron
                             fired_synapse_list[epoch][instance][sim_point].append(val)
                             spike_info[epoch][instance][sim_point]["fired_synapse_addr"].append(val)
-                        else:
+                        else:   # if it's an output layer neuron that has fired
                             for key,val in enumerate(sn_list[epoch][instance][i].fan_out_synapse_addr):
                                 fired_synapse_list[epoch][instance][sim_point].append(val)
                                 spike_info[epoch][instance][sim_point]["fired_synapse_addr"].append(val)
@@ -432,6 +435,10 @@ for epoch in range(num_epochs):
                                     desired_out_time_vector[epoch][instance]["out_latency"][first_to_fire_class[epoch][instance]]
                             else:   # there are classes that fire at the same time
                                 first_to_fire_class[epoch][instance] = num_neurons_perLayer[-1]
+            
+            # if a output neuron has fired once
+            if first_to_fire_class[epoch][instance] != None:
+                break
 
         # append statistics at the end of the training instance
         if first_to_fire_class[epoch][instance] == desired_out_time_vector[epoch][instance]["class_num"]:
@@ -444,7 +451,7 @@ for epoch in range(num_epochs):
         f_handle.write("-------------------------------------------------\n")
 
         if correct_cnt == stop_num:
-            print("Supervised Training stops at Epoch {} Instance {} because succesive correct count has reached {}"
+            print("Supervised Training stops at Epoch {} Instance {} because successive correct count has reached {}"
                     .format(epoch, instance, correct_cnt))
             break
     f_handle.write("********************************End of Epoch {}!***********************\n\n".format(epoch))

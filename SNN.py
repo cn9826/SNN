@@ -248,7 +248,113 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             
         return newWeight                                
 
+    def BinaryReward_training(self, sim_point, spike_in_time, spike_out_time, epoch, instance,
+                              oldWeight, causal_fan_in_addr, f_handle,
+                              correct_inference, successive_correct_cnt, coarse_fine_cut_off,
+                              kernel1="composite-exponential", kernel2="exponential", 
+                              kernel3="exponential", kernel4="exponential",
+                              A_coarse=4, A_fine=1, 
+                              tau_long=14, tau_short=2,
+                              tau=14, debug=0): 
+        kernel_list = ["composite-exponential", "exponential"]
+        
+        if successive_correct_cnt >= coarse_fine_cut_off:   # determine A
+            A = A_coarse
+        else:
+            A = A_fine
+            if debug:
+                f_handle.write("Instance {}: switching to Fine-update at step {}\n"
+                                .format(epoch, isntance, sim_point))
 
+        newWeight = [None] * len(oldWeight)
+
+        for i in range(len(newWeight)):
+            if spike_in_time <= spike_out_time:       # causal 1st or 4th quadrant
+                if correct_inference == 1: # causal P+: 1st quadrant
+                    if kernel1="composite-exponential":
+                        deltaWeight = \
+                            A * (
+                                    math.exp(-(spike_out_time - spike_in_time)/tau_long)
+                                    - math.exp(-(spike_out_time - spike_in_time)/tau_short)
+                                )
+                    elif kernel1="exponential":
+                        deltaWeight = \
+                            A * (
+                                    math.exp(-(spike_out_time - spike_in_time)/tau)
+                                )
+                    else:
+                        deltaWeight=0
+        
+                    newWeight[i] = oldWeight[i] + deltaWeight
+        
+                    if debug and kernel1 is in kernel_list:
+                        f_handle.write("Instance {}: Causal P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, sim_point))
+                
+                elif correct_inference == 0: # causal P-: 4th quadrant
+                    if kernel4="composite-exponential":
+                        deltaWeight = \
+                            -A * (
+                                    math.exp(-(spike_out_time - spike_in_time)/tau_long)
+                                    - math.exp(-(spike_out_time - spike_in_time)/tau_short)
+                                )
+                    elif kernel4="exponential":
+                        deltaWeight = \
+                            -A * (
+                                    math.exp(-(spike_out_time - spike_in_time)/tau)
+                                )
+                    else:
+                        deltaWeight=0
+
+                    newWeight[i] = oldWeight[i] + deltaWeight
+        
+                    if debug and kernel4 is in kernel_list:
+                        f_handle.write("Instance {}: Causal P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, sim_point))
+
+            elif spike_in_time > spike_out_time:      # anti-causal 2nd or 3rd quadrant
+                if correct_inference == 1: # anti-causal P+: 3rd quadrant
+                    if kernel3="composite-exponential":
+                        deltaWeight = \
+                            -A * (
+                                    math.exp((spike_out_time - spike_in_time)/tau_long)
+                                    - math.exp((spike_out_time - spike_in_time)/tau_short)
+                                )
+                    elif kernel3="exponential":
+                        deltaWeight = \
+                            -A * (
+                                    math.exp((spike_out_time - spike_in_time)/tau)
+                                )
+                    else:
+                        deltaWeight=0
+
+                    newWeight[i] = oldWeight[i] + deltaWeight
+        
+                    if debug and kernel3 is in kernel_list:
+                        f_handle.write("Instance {}: anti-Causal P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, sim_point))
+
+                elif correct_inference == 0: # anti-causal P-: 2nd quadrant
+                    if kernel2="composite-exponential":
+                        deltaWeight = \
+                            A * (
+                                    math.exp((spike_out_time - spike_in_time)/tau_long)
+                                    - math.exp((spike_out_time - spike_in_time)/tau_short)
+                                )
+                    elif kernel2="exponential":
+                        deltaWeight = \
+                            A * (
+                                    math.exp((spike_out_time - spike_in_time)/tau)
+                                )
+                    else:
+                        deltaWeight=0
+
+                    newWeight[i] = oldWeight[i] + deltaWeight
+        
+                    if debug and kernel2 is in kernel_list:
+                        f_handle.write("Instance {}: anti-Causal P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, sim_point))
+        return newWeight           
 
     def accumulate(self, sim_point, spike_in_info, WeightRAM_inst, epoch, instance, f_handle,
                    successive_correct_cnt,

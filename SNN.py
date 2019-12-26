@@ -299,9 +299,10 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                             A * (
                                     math.exp(-(spike_out_time - spike_in_time)/tau)
                                 )
-                    else:
-                        deltaWeight=0
-        
+                    elif not kernel1 in kernel_list:
+                        print("Error: kernel1 is not in the kernel list!")
+                        exit(1)
+
                     newWeight[i] = oldWeight[i] + int(deltaWeight)
                     newWeight[i] = clip_newWeight(newWeight[i])
 
@@ -321,8 +322,9 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                             -A * (
                                     math.exp(-(spike_out_time - spike_in_time)/tau)
                                 )
-                    else:
-                        deltaWeight=0
+                    elif not kernel4 in kernel_list:
+                        print("Error: kernel4 is not in the kernel list!")
+                        exit(1)
 
                     newWeight[i] = oldWeight[i] + int(deltaWeight)
                     newWeight[i] = clip_newWeight(newWeight[i])
@@ -344,8 +346,10 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                             -A * (
                                     math.exp((spike_out_time - spike_in_time)/tau)
                                 )
-                    else:
-                        deltaWeight=0
+
+                    elif not kernel3 in kernel_list:
+                        print("Error: kernel3 is not in the kernel list!")
+                        exit(1)
 
                     newWeight[i] = oldWeight[i] + int(deltaWeight)
                     newWeight[i] = clip_newWeight(newWeight[i])
@@ -366,8 +370,10 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                             A * (
                                     math.exp((spike_out_time - spike_in_time)/tau)
                                 )
-                    else:
-                        deltaWeight=0
+
+                    elif not kernel2 in kernel_list:
+                        print("Error: kernel2 is not in the kernel list!")
+                        exit(1)
 
                     newWeight[i] = oldWeight[i] + int(deltaWeight)
                     newWeight[i] = clip_newWeight(newWeight[i])
@@ -378,6 +384,145 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
     
         
         return newWeight           
+
+    def BRRC_training(self, spike_ref_time, spike_out_time, instance,
+                                oldWeight, causal_fan_in_addr, f_handle,
+                                reward_signal, isf2f, isIntended,
+                                successive_correct_cnt, coarse_fine_cut_off,
+                                kernel_f2f_pos="composite-exponential", kernel_f2f_neg="exponential",
+                                kernel_other_pos="exponential", kernel_intended_neg="exponential",
+                                A_coarse_comp=5, A_fine_comp=2,
+                                tau_long=10, tau_short=4, 
+                                A_coarse=4, A_fine=1,
+                                tau=14, 
+                                max_weight=15, min_weight=-16,
+                                debug=0): 
+
+            # isf2f is to indicate whether the neuron being processed is a first-to-spike one
+            # isIntended is to indicate whether the neuron being processed is the intended first-to-spike one, only pertinent to nonF2F neurons
+
+            def clip_newWeight (newWeight, max_weight=max_weight, min_weight=min_weight):
+                if newWeight > max_weight:
+                    newWeight = max_weight
+                elif newWeight < min_weight:
+                    newWeight = min_weight
+                return newWeight
+
+            kernel_list = ["composite-exponential", "exponential"]
+                
+            if successive_correct_cnt >= coarse_fine_cut_off:   # determine A
+                A = A_fine
+                A_comp = A_fine_comp
+                if debug:
+                    f_handle.write("Instance {}: switching to Fine-update at out-spike time {}\n"
+                                    .format(instance, spike_out_time))
+            else:
+                A = A_coarse
+                A_comp = A_coarse_comp
+            newWeight = [None] * len(oldWeight)
+            
+            for i in range(len(newWeight)):
+                # weight update for f2f neuron, t_ref=t_in 
+                if isf2f:
+                    # F2F P+ reward quadrant
+                    if reward_signal:
+                        if kernel_f2f_pos=="composite-exponential":
+                            deltaWeight = \
+                                A_comp * (
+                                        math.exp(-(spike_out_time - spike_ref_time)/tau_long)
+                                        - math.exp(-(spike_out_time - spike_ref_time)/tau_short)
+                                    )
+                        elif kernel_f2f_pos=="exponential":
+                            deltaWeight = \
+                                A * (
+                                        math.exp(-(spike_out_time - spike_ref_time)/tau)
+                                    )
+                        elif not kernel_f2f_pos in kernel_list:
+                            print("Error when calling BRRC_training: kernel_f2f_pos is not in the kernel list!")
+                            exit(1)
+
+                        newWeight[i] = oldWeight[i] + int(deltaWeight)
+                        newWeight[i] = clip_newWeight(newWeight[i])
+
+                        if debug:
+                            f_handle.write("Instance {}: F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, spike_out_time))                           
+                    # F2F P- punishment quadrant
+                    else:
+                        if kernel_f2f_neg=="composite-exponential":
+                            deltaWeight = \
+                                -A_comp * (
+                                        math.exp(-(spike_out_time - spike_ref_time)/tau_long)
+                                        - math.exp(-(spike_out_time - spike_ref_time)/tau_short)
+                                    )
+                        elif kernel_f2f_neg=="exponential":
+                            deltaWeight = \
+                                -A * (
+                                        math.exp(-(spike_out_time - spike_ref_time)/tau)
+                                    )
+                        elif not kernel_f2f_neg in kernel_list:
+                            print("Error when calling BRRC_training: kernel_f2f_neg is not in the kernel list!")
+                            exit(1)
+
+                        newWeight[i] = oldWeight[i] + int(deltaWeight)
+                        newWeight[i] = clip_newWeight(newWeight[i])
+
+                        if debug:
+                            f_handle.write("Instance {}: F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, spike_out_time))                           
+
+                # weight update for non-f2f neuron that fired within separation window, t_ref = t_first-spike
+                else:
+                    # weight update for non-f2f neurons that fired within separation window under reward
+                    if reward_signal and not isIntended:
+                        if kernel_other_pos=="composite-exponential":
+                            deltaWeight = \
+                                -A_comp * (
+                                        math.exp(-(spike_out_time - spike_ref_time)/tau_long)
+                                        - math.exp(-(spike_out_time - spike_ref_time)/tau_short)
+                                    )
+                        elif kernel_other_pos=="exponential":
+                            deltaWeight = \
+                                -A * (
+                                        math.exp(-(spike_out_time - spike_ref_time)/tau)
+                                    )
+                        elif not kernel_other_pos in kernel_list:
+                            print("Error when calling BRRC_training: kernel_other_pos is not in the kernel list!")
+                            exit(1)
+
+                        newWeight[i] = oldWeight[i] + int(deltaWeight)
+                        newWeight[i] = clip_newWeight(newWeight[i])
+
+                        if debug:
+                            f_handle.write("Instance {}: Non-F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, spike_out_time))                           
+                    
+                    # weight update for non-f2f neuron but is intended that fired within separation window under punishment
+                    elif not reward_signal and isIntended:
+                        if kernel_intended_neg=="composite-exponential":
+                            deltaWeight = \
+                                A_comp * (
+                                        math.exp(-(spike_out_time - spike_ref_time)/tau_long)
+                                        - math.exp(-(spike_out_time - spike_ref_time)/tau_short)
+                                    )
+                        elif kernel_intended_neg=="exponential":
+                            deltaWeight = \
+                                A * (
+                                        math.exp(-(spike_out_time - spike_ref_time)/tau)
+                                    )
+                        elif not kernel_intended_neg in kernel_list:
+                            print("Error when calling BRRC_training: kernel_intended_neg is not in the kernel list!")
+                            exit(1)
+
+                        newWeight[i] = oldWeight[i] + int(deltaWeight)
+                        newWeight[i] = clip_newWeight(newWeight[i])
+
+                        if debug:
+                            f_handle.write("Instance {}: Non-F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight[i], newWeight[i], causal_fan_in_addr[i], self.neuron_idx, spike_out_time))                           
+
+            return newWeight           
+
 
     def accumulate(self, sim_point, spike_in_info, WeightRAM_inst, epoch, instance, f_handle,
                    debug_mode=0

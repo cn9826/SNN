@@ -74,8 +74,10 @@ tau_u = 16      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 threshold = 120
 
-num_epochs = 1                 # number of epochs
-num_instances =500             # number of training instances per epoch
+supervised_training_on = 1      # turn on/off supervised training 
+anti_causal_watch_window = 16
+num_epochs = 1                  # number of epochs
+num_instances =100              # number of training instances per epoch
 stop_num = 20
 coarse_fine_ratio=0.5
 
@@ -88,9 +90,9 @@ plot_response = 0
 input_pattern = \
     {
         "00"    :   [0, 0],
-        "01"    :   [0, 50],        # 3*tau_u
-        "10"    :   [50, 0],
-        "11"    :   [50, 50]
+        "01"    :   [0, 40],        # 3*tau_u
+        "10"    :   [40, 0],
+        "11"    :   [40, 40]
     }
 
 ## Define Output first-to-fire pattern
@@ -133,8 +135,8 @@ desired_ff_neuron = [
                         [
                             {
                                 "in_pattern"            :   None,
-                                "out_pattern"        :   None,
-                                "ff_neuron"        :   None
+                                "out_pattern"           :   None,
+                                "ff_neuron"             :   None
                             } for instance in range(num_instances)
                         ] for epoch in range(num_epochs)
                     ]
@@ -147,8 +149,6 @@ for epoch in range(num_epochs):
             input_output_map.get(stimulus_time_vector[epoch][instance]["in_pattern"])
         desired_ff_neuron[epoch][instance]["ff_neuron"] = \
             output_pattern[desired_ff_neuron[epoch][instance]["out_pattern"]]
-
-
 
 #####################################################################################################################
 if len(stimulus_time_vector) != num_epochs:
@@ -197,7 +197,7 @@ for layer in range(num_layers):
 
 
 ## Initialize neuron indices and synpase address
-neuron_idx = range(num_neurons)
+neuron_indices = range(num_neurons)
 synapse_addr = range(num_synapses)
 
 ## Initialize Connectivity Table and its "fan_in_synapse_idx", "fan_out_synapse_idx" attributes 
@@ -208,9 +208,6 @@ ConnectivityTable = SNN.ConnectivityInfo(num_neurons=num_neurons,
 last_layer_last_synapse = -1
 for layer in range (num_layers):
     for neuron in range(num_neurons_perLayer[layer]):
-        # if (ConnectivityTable.neuron_idx[TableIdx] != TableIdx):
-        #     print("TableIdx {0} does not match neuron_idx {1} in the Connectivity Table!"
-        #             .format(TableIdx, ConnectivityTable.neuron_idx[TableIdx]))
         if layer == 0:
             TableIdx = neuron
             ConnectivityTable.fan_in_synapse_addr[TableIdx][0] = synapse_addr[TableIdx]      # input layer neurons have fan-in of 1  
@@ -247,7 +244,7 @@ for layer in range (num_layers):
 weight_vector = [
                     10, 10,
                     15, 15, 10, -15, -15, 10, 15, 15,
-                    10, 10, 10, 10, 10, 10, 10, 10
+                    6, 6, 6, 6, 6, 6, 6, 6
                 ] 
 
 # weight_vector = [
@@ -256,30 +253,10 @@ weight_vector = [
 #                     5, -4, -4, 5, 3, 2, 2, 3
 #                 ]     # one set that works under threshold 120, output pattern [80,150], tau_coarse = 16, tau_fine = 4
 
-# weight_vector = [
-#                     10, 10,
-#                     15, 15, 10, -15, -15, 10, 15, 15,
-#                     4, -4, -3, 4, 3, 2, 2, 3
-#                 ]    # another set that works under threshold 120, output pattern [80,150], tau_coarse = 16, tau_fine = 4
-
-# weight_vector = [
-#                     10, 10,
-#                     15, 15, 10, -15, -15, 10, 15, 15,
-#                     6, -10, -10, 6, 3, 2, 2, 3
-#                 ]    # one set that works under threshold 120, output pattern [80,150], tau_coarse = 50, tau_fine=16
-
-# weight_vector = [
-#                     10, 10,
-#                     15, 15, 10, -15, -15, 10, 15, 15,
-#                     4, -9, -11, 4, 3, 4, 4, 3
-#                 ]    # one set that works under threshold 120, output pattern [80,150], tau_coarse = 50, tau_fine=16
 
 
-# weight_vector = [
-#                     10, 10,
-#                     15, 15, 10, -15, -15, 10, 15, 15,
-#                     4, -1, -1, 4, 2, 4, 4, 2
-#                 ]    # one set that works under threshold 120, output pattern [80,200], tau_coarse = 32
+
+
 
 
 WeightRAM = SNN.WeightRAM(num_synapses)
@@ -313,8 +290,7 @@ sn_list =   [
             ]
 for epoch in range(num_epochs):
     for instance in range(num_instances):
-        output_layer_idx = 0
-        for i in neuron_idx:
+        for i in neuron_indices:
             sn = SNN.SpikingNeuron( layer_idx=ConnectivityTable.layer_num[i],
                                     neuron_idx=i, 
                                     fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
@@ -332,16 +308,15 @@ for epoch in range(num_epochs):
                 sn.training_on = 0
             # check if neuron is in the output layer 
             if sn.layer_idx == num_layers - 1:
-                sn.training_on = 0
+                sn.training_on = supervised_training_on
                 sn.supervised = 1
-                sn.spike_out_time_d_list =  [
+                sn.desired_ff_idx =         [
                                                 [
-                                                    [desired_out_time_vector[epoch][instance]["out_latency"][output_layer_idx]]
+                                                    desired_ff_neuron[epoch][instance]["ff_neuron"]
                                                     for instance in range(num_instances)
                                                 ] for epoch in range(num_epochs)
                                             ]
-                output_layer_idx += 1
-
+               
             sn_list[epoch][instance].append(sn)
 #%% Simulation of SNN in time-major order
 
@@ -378,31 +353,22 @@ spike_info = [
              # a list of dictionaries sorted by time steps
 
 ## Initialize statistics
-first_to_fire_class =  [
-                            [None for instance in range(num_instances)]
-                            for epoch in range(num_epochs)
-                        ]
+output_neuron_fire_info =   [
+                                [ 
+                                    {
+                                        "neuron_idx":   [],
+                                        "time"      :   []
+                                    } 
+                                    for instance in range(num_instances)
+                                ]
+                                for epoch in range(num_epochs)
+                            ]   # actual first-to-fire output layer neuron 
 
 inference_correct =     [
                             [    
                                 None for instance in range(num_instances) 
                             ] for epoch in range(num_epochs)
                         ]   # num_epochs x num_instances
-
-
-temporal_diff =         [
-                            [    
-                                None for instance in range(num_instances) 
-                            ] for epoch in range(num_epochs)
-                        ]   # num_epochs x num_instances x num_output_neurons
-                            # out-spike time - desired spike time 
-
-temporal_diff_stats =   [
-                            [    
-                                [None] * num_neurons_perLayer[-1] 
-                            ] for epoch in range(num_epochs)
-                        ]   # num_epochs x num_output_neurons
-
 
 ## Training Loop
 for epoch in range(num_epochs):
@@ -422,50 +388,204 @@ for epoch in range(num_epochs):
 
             spike_info[epoch][instance][sim_point]["time"] = sim_point
             
-            for i in neuron_idx:
-                # check if the neuron being updated is in the output layer
+            for i in neuron_indices:
                 sn_list[epoch][instance][i].accumulate(sim_point=sim_point, 
                                         spike_in_info=spike_info[epoch][instance][sim_point], 
                                         WeightRAM_inst=WeightRAM,
                                         debug_mode=debug_mode,
                                         epoch=epoch,
                                         instance=instance,
-                                        f_handle=f_handle,
-                                        successive_correct_cnt=correct_cnt,
-                                        coarse_fine_cut_off=stop_num*coarse_fine_ratio
+                                        f_handle=f_handle
                                         )                               
+                
                 # upadate the current potential to PotentialRAM
                 PotentialRAM.potential[epoch][instance][i] = sn_list[epoch][instance][i].v[sim_point]
                 
                 # update the list of synapses that fired at this sim_point
                 if (sn_list[epoch][instance][i].fire_cnt != -1):
                     if (sn_list[epoch][instance][i].spike_out_info[sn_list[epoch][instance][i].fire_cnt]["time"] == sim_point):
-                        if (len(sn_list[epoch][instance][i].fan_out_synapse_addr) == 1): # if its an inner-layer neuron
+                        if (len(sn_list[epoch][instance][i].fan_out_synapse_addr) == 1): # if single fan-out
                             fired_synapse_list[epoch][instance][sim_point].append(val)
                             spike_info[epoch][instance][sim_point]["fired_synapse_addr"].append(val)
-                        else:   # if it's an output layer neuron that has fired
+                        else:   # if multiple fan-out synpases
                             for key,val in enumerate(sn_list[epoch][instance][i].fan_out_synapse_addr):
                                 fired_synapse_list[epoch][instance][sim_point].append(val)
                                 spike_info[epoch][instance][sim_point]["fired_synapse_addr"].append(val)
                         
                         fired_neuron_list[epoch][instance][sim_point].append(sn_list[epoch][instance][i].neuron_idx)
-                        # update first_to_fire_neuron during after this training instance
-                        if (sn_list[epoch][instance][i].layer_idx == num_layers-1): 
-                            if (first_to_fire_class[epoch][instance] == None):    
-                                first_to_fire_class[epoch][instance] = \
-                                    sn_list[epoch][instance][i].neuron_idx - sum(num_neurons_perLayer[0:-1])
-                                temporal_diff[epoch][instance] = sim_point - \
-                                    desired_out_time_vector[epoch][instance]["out_latency"][first_to_fire_class[epoch][instance]]
-                            else:   # there are classes that fire at the same time
-                                first_to_fire_class[epoch][instance] = num_neurons_perLayer[-1]
+
+                        # if the fired neuron at this sim_point is in the output layer
+                        if (sn_list[epoch][instance][i].layer_idx == num_layers - 1):
+                            output_neuron_fire_info[epoch][instance]["neuron_idx"].append(sn_list[epoch][instance][i].neuron_idx)
+                            output_neuron_fire_info[epoch][instance]["time"].append(sim_point)
+
+        # at the end of the simulation duration, inspect output-layer firing info         
+        if len(output_neuron_fire_info[epoch][instance]["neuron_idx"]) > 0:
+            # find the minimum of firing time and its corresponding list index
+            min_fire_time = min(output_neuron_fire_info[epoch][instance]["time"])
+            list_min_idx = index_duplicate(output_neuron_fire_info[epoch][instance]["time"], min_fire_time)
             
-        # append statistics at the end of the training instance
-        if first_to_fire_class[epoch][instance] == desired_out_time_vector[epoch][instance]["class_num"]:
-            inference_correct[epoch][instance] = 1
-            correct_cnt += 1
+            # more than one output layer neuron have fired at the same min_fire_time
+            if len(list_min_idx) > 1:       
+                correct_cnt = 0
+                inference_correct[epoch][instance] = 0
+                
+                if supervised_training_on == 1:
+                    # iterate through all the output layer neuron that fired before the end of sim duration
+                    for neuron_idx in output_neuron_fire_info[epoch][instance]["neuron_idx"]:
+                        sn = sn_list[epoch][instance][neuron_idx]
+                        
+                        # if the correct class neuron fired, 1st quadrant training
+                        if neuron_idx == desired_ff_neuron[epoch][instance]["ff_neuron"]:
+                            newWeight = sn.BinaryReward_training(
+                                                        spike_in_time=sn.causal_spike_in_info["time"],
+                                                        spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                        instance=instance,
+                                                        oldWeight=sn.oldWeight,
+                                                        causal_fan_in_addr=sn.causal_fan_in_addr,
+                                                        f_handle=f_handle,
+                                                        reward_signal=1,
+                                                        successive_correct_cnt=correct_cnt,
+                                                        coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                        debug=1
+                                                        )
+                            sn.updateWeight(fan_in_addr=sn.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+                            # check if anti-causal training in 3rd quadrant is needed
+                            if (sn.causal_fan_in_addr != sn.relavent_fan_in_addr
+                                and sn.last_spike_in_info["time"] - sn.spike_out_info[0]["time"] <= anti_causal_watch_window):
+                                anti_causal_weight = sn.fetchWeight(WeightRAM, sn.relavent_fan_in_addr) 
+                                newWeight = sn.BinaryReward_training(
+                                                            spike_in_time=sn.last_spike_in_info["time"],
+                                                            spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                            instance=instance,
+                                                            oldWeight=anti_causal_weight,
+                                                            causal_fan_in_addr=sn.relavent_fan_in_addr,
+                                                            f_handle=f_handle,
+                                                            reward_signal=1,
+                                                            successive_correct_cnt=correct_cnt,
+                                                            coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                            debug=1
+                                                            )
+                                sn.updateWeight(fan_in_addr=sn.relavent_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+
+                        # if the wrong class neuron fired, 4th quadrant training                                 
+                        else:
+                            newWeight = sn.BinaryReward_training(
+                                                        spike_in_time=sn.causal_spike_in_info["time"],
+                                                        spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                        instance=instance,
+                                                        oldWeight=sn.oldWeight,
+                                                        causal_fan_in_addr=sn.causal_fan_in_addr,
+                                                        f_handle=f_handle,
+                                                        reward_signal=0,
+                                                        successive_correct_cnt=correct_cnt,
+                                                        coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                        debug=1
+                                                        )
+                            sn.updateWeight(fan_in_addr=sn.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+                            # check if anti-causal training in 2nd quadrant is needed
+                            if (sn.causal_fan_in_addr != sn.relavent_fan_in_addr
+                                and sn.last_spike_in_info["time"] - sn.spike_out_info[0]["time"] <= anti_causal_watch_window):
+                                anti_causal_weight = sn.fetchWeight(WeightRAM, sn.relavent_fan_in_addr) 
+                                newWeight = sn.BinaryReward_training(
+                                                            spike_in_time=sn.last_spike_in_info["time"],
+                                                            spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                            instance=instance,
+                                                            oldWeight=anti_causal_weight,
+                                                            causal_fan_in_addr=sn.relavent_fan_in_addr,
+                                                            f_handle=f_handle,
+                                                            reward_signal=0,
+                                                            successive_correct_cnt=correct_cnt,
+                                                            coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                            debug=1
+                                                            )
+                                sn.updateWeight(fan_in_addr=sn.relavent_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+                       
+            # only one output layer neuron fired at the min_fire_time             
+            elif len(list_min_idx) == 1:
+                neuron_idx = output_neuron_fire_info[epoch][instance]["neuron_idx"][0]
+                sn = sn_list[epoch][instance][neuron_idx] 
+                
+                # if the correct class neuron fired, 1st quadrant training
+                if neuron_idx == desired_ff_neuron[epoch][instance]["ff_neuron"]:
+                    correct_cnt += 1
+                    inference_correct[epoch][instance] = 1
+                    if supervised_training_on == 1:    
+                        newWeight = sn.BinaryReward_training(
+                                spike_in_time=sn.causal_spike_in_info["time"],
+                                spike_out_time=sn.spike_out_info[0]["time"],                        
+                                instance=instance,
+                                oldWeight=sn.oldWeight,
+                                causal_fan_in_addr=sn.causal_fan_in_addr,
+                                f_handle=f_handle,
+                                reward_signal=1,
+                                successive_correct_cnt=correct_cnt,
+                                coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                debug=1
+                                )
+                        sn.updateWeight(fan_in_addr=sn.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+                        # check if anti-causal training in 3rd quadrant is needed
+                        if sn.causal_fan_in_addr != sn.relavent_fan_in_addr:
+                            anti_causal_weight = sn.fetchWeight(WeightRAM, sn.relavent_fan_in_addr) 
+                            newWeight = sn.BinaryReward_training(
+                                                        spike_in_time=sn.last_spike_in_info["time"],
+                                                        spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                        instance=instance,
+                                                        oldWeight=anti_causal_weight,
+                                                        causal_fan_in_addr=sn.relavent_fan_in_addr,
+                                                        f_handle=f_handle,
+                                                        reward_signal=1,
+                                                        successive_correct_cnt=correct_cnt,
+                                                        coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                        debug=1
+                                                        )
+                            sn.updateWeight(fan_in_addr=sn.relavent_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+                
+                # if the wrong class neuron fired, 4th quadrant training
+                else:
+                    correct_cnt = 0
+                    inference_correct[epoch][instance] = 0
+                    if supervised_training_on == 1:
+                        newWeight = sn.BinaryReward_training(
+                                                    spike_in_time=sn.causal_spike_in_info["time"],
+                                                    spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                    instance=instance,
+                                                    oldWeight=sn.oldWeight,
+                                                    causal_fan_in_addr=sn.causal_fan_in_addr,
+                                                    f_handle=f_handle,
+                                                    reward_signal=0,
+                                                    successive_correct_cnt=correct_cnt,
+                                                    coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                    debug=1
+                                                    )
+                        sn.updateWeight(fan_in_addr=sn.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+                        # check if anti-causal training in 2nd quadrant is needed
+                        if (sn.causal_fan_in_addr != sn.relavent_fan_in_addr
+                            and sn.last_spike_in_info["time"] - sn.spike_out_info[0]["time"] <= anti_causal_watch_window):
+                            anti_causal_weight = sn.fetchWeight(WeightRAM, sn.relavent_fan_in_addr) 
+                            newWeight = sn.BinaryReward_training(
+                                                        spike_in_time=sn.last_spike_in_info["time"],
+                                                        spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                        instance=instance,
+                                                        oldWeight=anti_causal_weight,
+                                                        causal_fan_in_addr=sn.relavent_fan_in_addr,
+                                                        f_handle=f_handle,
+                                                        reward_signal=0,
+                                                        successive_correct_cnt=correct_cnt,
+                                                        coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                        debug=1
+                                                        )
+                            sn.updateWeight(fan_in_addr=sn.relavent_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+
         else:
+        # no output layer neuron has fired
+            correct_cnt=0
             inference_correct[epoch][instance] = 0
-            correct_cnt = 0
+            f_handle.write("Instance {}: training failed -- no output layer neuron has fired up until sim_point{}!\n"
+            .format(instance, sim_point))
+            print("Instance {}: training failed -- no output layer neuron has fired up until sim_point{}!"
+            .format(instance, sim_point))
+        
         f_handle.write("Succesive correct count: {}\n".format(correct_cnt))
         f_handle.write("-------------------------------------------------\n")
 

@@ -250,8 +250,9 @@ weight_vector = [
 # weight_vector = [
 #                     10, 10,
 #                     15, 15, 10, -15, -15, 10, 15, 15,
-#                     5, -4, -4, 5, 3, 2, 2, 3
-#                 ]     # one set that works under threshold 120, output pattern [80,150], tau_coarse = 16, tau_fine = 4
+#                     6, 0, 0, 6, 5, 8, 10, 5
+#                 ]     #  one set that works under threshold 120, input pattern [0, 40]
+                        ## BR_training: A_coarse_comp=5, A_fine_comp=2, tau_long=10, tau_short=4, A_coarse=4, A_fine=1, tau=14
 
 
 

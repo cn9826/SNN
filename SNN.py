@@ -225,34 +225,47 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         return newWeight         
         
     def STDP_training(self, sim_point, spike_in_time, spike_out_time, epoch, instance,
-                        oldWeight, f_handle, kernel="exponential", max_weight=15, min_weight=-15,
-                        A_di=4, tau_pos=9, tau_neg=100, debug=1):
+                        oldWeight, f_handle, kernel="rectangle", max_weight=15, min_weight=-15,
+                        A_di=3, tau_pos=16, tau_neg=16, debug=1):
+        
+        kernel_list = ["exponential", "rectangle"]
+        if not kernel in kernel_list:
+            print("Error when calling SimpleSTDP_training: kernel {} is not recognized!".format(kernel))
+            exit(1)
+
         newWeight = [None] * len(oldWeight)
         for i in range(len(newWeight)):
             if spike_in_time > spike_out_time:
-                deltaWeight =  -1 * int(A_di * math.exp((spike_out_time-spike_in_time)/tau_neg))
+                if kernel == "exponential":
+                    deltaWeight =  -1 * int(A_di * math.exp((spike_out_time-spike_in_time)/tau_neg))
+                elif kernel == "rectangle":
+                    deltaWeight = -1 * A_di
                 newWeight[i] = oldWeight[i] + deltaWeight
                 if newWeight[i] > max_weight:
                     newWeight[i]=max_weight    
                 elif newWeight[i] < min_weight:
                     newWeight[i]=min_weight
                 if debug:
-                    f_handle.write("Epoch {} Instance {}: Updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon late in-spike at time {}\n"
-                            .format(epoch, instance, oldWeight[i], newWeight[i], self.relavent_fan_in_addr[i], self.neuron_idx, sim_point))
+                    f_handle.write("Instance {}: anti-Causal Updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon late in-spike at time {}\n"
+                            .format(instance, oldWeight[i], newWeight[i], self.relavent_fan_in_addr[i], self.neuron_idx, sim_point))
             
             elif spike_in_time <= spike_out_time:
-                deltaWeight =  int(A_di * math.exp(-(spike_out_time-spike_in_time)/tau_pos))
+                if kernel == "exponential":
+                    deltaWeight = int(A_di * math.exp((spike_out_time-spike_in_time)/tau_neg))
+                elif kernel == "rectangle":
+                    deltaWeight = A_di
                 newWeight[i] = oldWeight[i] + deltaWeight                
                 if newWeight[i] > max_weight:
                     newWeight[i]=max_weight    
                 elif newWeight[i] < min_weight:
                     newWeight[i]=min_weight
                 if debug:
-                    f_handle.write("Epoch {} Instance {}: Updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                            .format(epoch, instance, oldWeight[i], newWeight[i], self.relavent_fan_in_addr[i], self.neuron_idx, sim_point))
+                    f_handle.write("Instance {}: Causal Updated oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight[i], newWeight[i], self.relavent_fan_in_addr[i], self.neuron_idx, sim_point))
             
         return newWeight                                
 
+    
     def BinaryReward_training(self, spike_in_time, spike_out_time, instance,
                               oldWeight, causal_fan_in_addr, f_handle,
                               reward_signal, successive_correct_cnt, coarse_fine_cut_off,
@@ -559,7 +572,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     self.oldWeight = weight
                     self.causal_spike_in_info = self.last_spike_in_info
                     self.causal_fan_in_addr = relavent_fan_in_addr
-                
+                    
                 self.u[sim_point] = (1 - dt/self.tau_u) * self.u[sim_point-1] + sum(weight) * dt
             else:
                 if (self.u[sim_point-1] != 0):                          # added to take advantage of potential sparsity
@@ -589,6 +602,4 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 self.fire_cnt += 1
                 if debug_mode:
                     f_handle.write("Epoch {} Instance {}: Neuron {} at Layer{} has fired {} times at step {}\n"
-                        .format(epoch, instance, self.neuron_idx, self.layer_idx,self.fire_cnt + 1, [entry["time"] for entry in self.spike_out_info]))
-            
-               
+                        .format(epoch, instance, self.neuron_idx, self.layer_idx,self.fire_cnt + 1, [entry["time"] for entry in self.spike_out_info]))               

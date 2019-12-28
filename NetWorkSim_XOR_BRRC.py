@@ -5,8 +5,6 @@ import random
 from operator import itemgetter
 from pandas import DataFrame
 
-
-f_handle = open("sim_printouts/XOR/BRRC/dumpsim_BRRC.txt", "w+")
 #%% Defined Functions 
 def index_duplicate (seq, item):
     start_at = -1
@@ -62,8 +60,13 @@ def randomInt(mean, std, num):
     value_array = np.random.normal(mean,std,num)
     value_list = [int(value) for value in value_array]
     return value_list
+
+
+
 #%% Initializations of Tables and Objects and Lists of Objects
 #####################################################################################################################
+printout_dir = "sim_printouts/XOR/"
+
 ## Specify Global Connectivity Parmeters
 num_neurons_perLayer = [2,4,2]                           # Assuming num_neurons_perLayer is the number of connections in FC case
 max_num_fires = 1
@@ -74,16 +77,19 @@ tau_u = 16      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 threshold = 120
 
+## Supervised Training Parameters
 supervised_training_on = 1      # turn on/off supervised training 
 separation_window = tau_u
-num_epochs = 1                  # number of epochs
-num_instances =100              # number of training instances per epoch
 stop_num = 20
 coarse_fine_ratio=0.5
 
+## Training Dataset Parameters
+num_epochs = 1                  # number of epochs
+num_instances =100              # number of training instances per epoch
+
 ## Simulation Settings
 debug_mode = 1
-plot_response = 1
+plot_response = 0
 
 
 ## Define Input & Output Patterns
@@ -150,7 +156,16 @@ for epoch in range(num_epochs):
         desired_ff_neuron[epoch][instance]["ff_neuron"] = \
             output_pattern[desired_ff_neuron[epoch][instance]["out_pattern"]]
 
+
+
 #####################################################################################################################
+if supervised_training_on:
+    printout_dir = printout_dir + "Supervised/BRRC/dumpsim.txt"
+else:
+    printout_dir = printout_dir + "Inference/BRRC/dumpsim.txt"
+f_handle = open(printout_dir, "w+")
+
+
 if len(stimulus_time_vector) != num_epochs:
     print("Error: Dimension of stimulus does not match the number of epochs!")
     exit(1)
@@ -309,6 +324,7 @@ for epoch in range(num_epochs):
             # chekc if neuron is in the input layer
             if sn.layer_idx == 0:
                 sn.training_on = 0
+
             # check if neuron is in the output layer 
             if sn.layer_idx == num_layers - 1:
                 sn.training_on = supervised_training_on
@@ -601,7 +617,7 @@ for epoch in range(num_epochs):
         f_handle.write("Succesive correct count: {}\n".format(correct_cnt))
         f_handle.write("-------------------------------------------------\n")
 
-        if correct_cnt == stop_num:
+        if correct_cnt == stop_num and supervised_training_on:
             print("Supervised Training stops at Epoch {} Instance {} because successive correct count has reached {}"
                     .format(epoch, instance, correct_cnt))
             break

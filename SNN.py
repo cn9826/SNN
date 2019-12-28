@@ -36,13 +36,12 @@ class WeightRAM:   # indexed by fan_in_synapse_addr
 
 
 class PotentialRAM:  # indexed by neuron_idx
-    def __init__(self, num_neurons, max_num_connections, num_instances=1, num_epochs=1):
+    def __init__(self, num_neurons, max_num_connections, num_epochs=1):
         self.neuron_idx = range(num_neurons) 
         self.potential =    [  
                                 [
-                                    [0 for neurons in range(num_neurons)] 
-                                    for instance in range(num_epochs)
-                                ] for epochs in num_epochs  
+                                    0 for neurons in range(num_neurons) 
+                                ] for epochs in range(num_epochs)  
                             ]
         self.fan_out_synapse_addr = [
                                         [None for col in range(max_num_connections)] 
@@ -100,7 +99,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
     def ReSuMe_training(self, sim_point, spike_in_time, spike_out_time, epoch, 
                         spike_out_time_d, oldWeight,
                         kernel="exponential",
-                        a_d=0, A_di=8, tau=9, debug=1):
+                        a_d=0, A_di=8, tau=16, debug=1):
         # applied only on the snypatic weights attached to neurons in the output layer
 
         # a_d is the non-Hebbian term to adjust the average strength of the synaptic input
@@ -176,7 +175,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
 
 
     def accumulate(self, sim_point, spike_in_info, WeightRAM_inst, epoch, debug_mode=0, 
-                   kernel="exponential", a_d=0, A_di=8, tau=9):     
+                   kernel="exponential", a_d=0, A_di=4, tau=16):     
         # spike_in_info is the data transmitted between neurons: (a dictionary)
         #   spike_in_info["fired_synapse_addr"] (a list of int)
         #   spike_in_info["time"] (an int)
@@ -211,12 +210,6 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 self.relavent_fan_in_addr = relavent_fan_in_addr
                 self.last_spike_in_info = spike_in_info 
                 self.oldWeight = weight
-
-                # DELETE: for debug purposes #
-                if self.layer_idx == 2:
-                    print("\nEpoch {}: Neuron {} at Layer {} has updated its oldWeight to {} at step {}\n"
-                            .format(epoch, self.neuron_idx, self.layer_idx, self.oldWeight, sim_point))
-
 
                 self.u[sim_point] = (1 - dt/self.tau_u) * self.u[sim_point-1] + sum(weight) * dt
             else:

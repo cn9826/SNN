@@ -78,20 +78,20 @@ num_epochs = 10
 desired_out_time_list = [[None]*num_neurons_perLayer[-1] for rows in range(num_epochs)]
 desired_out_time_list = \
     [
-        [100],
-        [100],
-        [100],
-        [100],
-        [100],
-        [100],
-        [100],
-        [100],
-        [100],
-        [100]
+        [150],
+        [150],
+        [150],
+        [150],
+        [150],
+        [150],
+        [150],
+        [150],
+        [150],
+        [150]
     ]
 
 ## Initilize synaptic weight for all the synapses
-initial_weight = 8
+initial_weight = 10
 
 ## Simulation Settings
 debug_mode = 1
@@ -270,5 +270,5 @@ for epoch in range(num_epochs):
 print("End of Program!")
 
 if plot_response:
-    plotNeuronResponse_iterative(sn_list=sn_list, epochs_list=[0,num_layers-1], only_output_layer=0)
+    plotNeuronResponse_iterative(sn_list=sn_list, epochs_list=[0, num_epochs-1], only_output_layer=1)
     plt.show()

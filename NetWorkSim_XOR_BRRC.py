@@ -89,16 +89,16 @@ num_instances =100              # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
-plot_response = 0
+plot_response = 1
 
 
 ## Define Input & Output Patterns
 input_pattern = \
     {
         "00"    :   [0, 0],
-        "01"    :   [0, 40],        # 3*tau_u
-        "10"    :   [40, 0],
-        "11"    :   [40, 40]
+        "01"    :   [0, 30],        # 3*tau_u
+        "10"    :   [30, 0],
+        "11"    :   [30, 30]
     }
 
 ## Define Output first-to-fire pattern
@@ -130,8 +130,6 @@ for epoch in range (num_epochs):
     for instance in range(num_instances):
         stimulus_time_vector[epoch][instance]["in_pattern"] = \
                 random.choice(list(input_pattern.keys()))
-        # stimulus_time_vector[epoch][instance]["in_pattern"] = \
-        #         "11"
         stimulus_time_vector[epoch][instance]["in_latency"] = \
 input_pattern[stimulus_time_vector[epoch][instance]["in_pattern"]]
 
@@ -291,7 +289,6 @@ PotentialRAM = SNN.PotentialRAM(
                                 num_neurons=num_neurons, 
                                 max_num_connections=max(num_neurons_perLayer),
                                 num_instances=num_instances,
-                                num_epochs=num_epochs
                                )
 PotentialRAM.fan_out_synapse_addr = ConnectivityTable.fan_out_synapse_addr
 
@@ -412,13 +409,12 @@ for epoch in range(num_epochs):
                                         spike_in_info=spike_info[epoch][instance][sim_point], 
                                         WeightRAM_inst=WeightRAM,
                                         debug_mode=debug_mode,
-                                        epoch=epoch,
                                         instance=instance,
                                         f_handle=f_handle
                                         )                               
                 
                 # upadate the current potential to PotentialRAM
-                PotentialRAM.potential[epoch][instance][i] = sn_list[epoch][instance][i].v[sim_point]
+                PotentialRAM.potential[instance][i] = sn_list[epoch][instance][i].v[sim_point]
                 
                 # update the list of synapses that fired at this sim_point
                 if (sn_list[epoch][instance][i].fire_cnt != -1):

@@ -92,24 +92,57 @@ def plotNeuronResponse (sn):
             )
     hax2.hlines(y=sn.threshold, xmin=t[0], xmax=t[-1], lw=2, color='0.3', linestyles='dashed')
     
-    # fig.show()
-    
-def plotNeuronResponse_iterative(sn_list, epochs_list, instance_list, only_output_layer=1):
-    for epoch in epochs_list:
-        for instance in instance_list:            
-            if only_output_layer == 0:
-                for i in range(len(sn_list[epoch][instance])):
-                    plotNeuronResponse(sn_list[epoch][instance][i])
-            else:
-                for i in range(len(sn_list[epoch][instance])):
-                    if sn_list[epoch][instance][i].layer_idx == num_layers - 1:
-                        plotNeuronResponse(sn_list[epoch][instance][i])
+def plotNeuronResponse_iterative(sn_list, neuron_list, instance_list):
+    for instance in instance_list:
+        for neuron_idx in neuron_list:
+            plotNeuronResponse(sn_list[instance][neuron_idx])
 
 def randomInt(mean, std, num):
     value_array = np.random.normal(mean,std,num)
     value_list = [int(value) for value in value_array]
     return value_list
 
+def BimodalLatency(latency_mode, mean_early, std_early, mean_late, std_late, low_lim=0, high_lim=64):
+    latency_mode_list = ["early", "late"]
+    if not latency_mode in latency_mode_list:
+        print("Error when calling BimodalLatency: illegal specification of \"latency\"")
+        exit(1)
+    if latency_mode == "early":
+        latency = np.random.normal(mean_early, std_early)
+        if latency < low_lim:
+            latency = low_lim
+    elif latency_mode == "late":
+        latency = np.random.normal(mean_late, std_late)
+        if latency > high_lim:
+            latency = high_lim
+    return int(latency)
+    
+def getInLatencies(in_pattern, num_in_neurons, 
+                    mean_early, std_early, mean_late, std_late, low_lim=0, high_lim=64):
+    in_pattern_list = ["O", "X", "<<"]
+    if not in_pattern in in_pattern_list:
+        print("Error when calling getInLatencies: illegal specification of \"in_pattern\"")
+        exit(1)
+    
+    InLatencies = [None] * num_in_neurons
+    for i in range(num_in_neurons):
+        latency_late = \
+            BimodalLatency("late", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+        InLatencies[i] = latency_late
+
+    if in_pattern == "O":
+        for i in [0, 3, 5, 6]:
+            InLatencies[i] = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+    elif in_pattern == "X":
+        for i in [1, 2, 4, 7]:
+            InLatencies[i] = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+    elif in_pattern == "<<":
+        for i in [0, 1, 6, 7]:
+            InLatencies[i] = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+    return InLatencies
 #%% Parameters to tune
 ######################################################################################
 printout_dir = "sim_printouts/Contrived16Block/"
@@ -120,10 +153,10 @@ max_num_fires = 1
 
 ## Specify common Spiking Neuron Parameters
 duration = 200
-tau_u = 14      # in units with respect to duration
+tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
-vth_low = 2
-vth_high = 120
+vth_low = 1
+vth_high = 144
 
 ## Supervised Training Parameters
 supervised_training_on = 1      # turn on/off supervised training 
@@ -132,11 +165,11 @@ stop_num = 20
 coarse_fine_ratio=0.5
 
 ## Training Dataset Parameters
-num_instances =100              # number of training instances per epoch
+num_instances =200              # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
-plot_response = 0
+plot_response = 1
 
 if supervised_training_on:
     printout_dir = printout_dir + "Supervised/BRRC/dumpsim.txt"
@@ -149,46 +182,20 @@ f_handle = open(printout_dir, "w+")
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-early_in = 0
-late_in = 16
+mean_early = 2*tau_u
+std_early = int(2*tau_u/3)
+mean_late = 3*2*tau_u
+std_late = int(2*tau_u/3)
 
+initial_weight = [6] * num_neurons_perLayer[-2] * num_neurons_perLayer[-1] 
 weight_vector = \
     [
         10, 10, 10, 10, 10, 10, 10, 10,
-
+        *initial_weight
     ]
 
-O_in = [late_in] * num_neurons_perLayer[0]
-X_in = [late_in] * num_neurons_perLayer[0]
-A_in = [late_in] * num_neurons_perLayer[0]
-for i in range(num_neurons_perLayer[0]):
-    if i == 0:
-        O_in[i] = early_in
-        A_in[i] = early_in
-    elif i == 1:
-        X_in[i] = early_in
-        A_in[i] = early_in
-    elif i == 2:
-        X_in[i] = early_in
-    elif i == 3:
-        O_in[i] = early_in
-    elif i == 4:
-        X_in[i] = early_in
-    elif i == 5:
-        O_in[i] = early_in
-    elif i == 6:
-        O_in[i] = early_in
-        A_in[i] = early_in
-    elif i == 7:
-        X_in[i] = early_in
-        A_in[i] = early_in
+input_patterns = ("O", "X", "<<")
 
-input_pattern = \
-    {
-        "O"     :   O_in,
-        "X"     :   X_in,        
-        "<<"    :   A_in
-    }
 output_pattern = \
     {
         "O"     :   sum(num_neurons_perLayer[0:-1]),
@@ -208,9 +215,14 @@ stimulus_time_vector = [
 
 for instance in range(num_instances):
     stimulus_time_vector[instance]["in_pattern"] = \
-            random.choice(list(input_pattern.keys()))
-    stimulus_time_vector["in_latency"] = \
-input_pattern[stimulus_time_vector[instance]["in_pattern"]]
+            random.choice(input_patterns)
+    stimulus_time_vector[instance]["in_latency"] = \
+            getInLatencies(in_pattern=stimulus_time_vector[instance]["in_pattern"],
+                           num_in_neurons=num_neurons_perLayer[0],
+                           mean_early=mean_early, std_early=std_early,
+                           mean_late=mean_late, std_late=std_late,
+                           low_lim=0, high_lim=4*2*tau_u  
+                           )
 
 
 ## Specify the index of the desired output layer neuron to fire
@@ -226,7 +238,7 @@ for instance in range(num_instances):
     desired_ff_neuron[instance]["in_pattern"] = \
         stimulus_time_vector[instance]["in_pattern"]
     desired_ff_neuron[instance]["out_pattern"] = \
-        stimulus_time_vector[instance]["out_pattern"]
+        stimulus_time_vector[instance]["in_pattern"]
     desired_ff_neuron[instance]["ff_neuron"] = \
         output_pattern[desired_ff_neuron[instance]["out_pattern"]]
 
@@ -245,7 +257,7 @@ if len(desired_ff_neuron) != num_instances:
     exit(1)
 ######################################################################################
 
-#%% Initialization before simulation loop
+#%% Connectivity Initialization
 ######################################################################################
 stimulus_vector_info =  [
                             [] 
@@ -299,3 +311,364 @@ for layer in range (num_layers):
     else:
         last_layer_last_synapse = synapse_addr[last_layer_last_synapse + (neuron+1)*num_neurons_perLayer[layer-1]]
 
+WeightRAM = SNN.WeightRAM(num_synapses)
+for i in synapse_addr:
+    neuron_idx_WRAM, connection_num = index_2d(ConnectivityTable.fan_in_synapse_addr,synapse_addr[i])
+    num_fan_in = len([fan_in for fan_in in ConnectivityTable.fan_in_synapse_addr[neuron_idx_WRAM] if fan_in is not None]) 
+    # if hidden layer, de-uniformize fan-in weights
+    WeightRAM.neuron_idx[i] = neuron_idx_WRAM
+    WeightRAM.weight[i] = weight_vector[i]
+
+## Initialize PotentialRAM --  a class with list attibutes sorted/indexed by neuron_idx; its contents are membrane potential & fan_out_synapse_addr
+PotentialRAM = SNN.PotentialRAM(
+                                num_neurons=num_neurons, 
+                                max_num_connections=max(num_neurons_perLayer),
+                                num_instances=num_instances,
+                               )
+PotentialRAM.fan_out_synapse_addr = ConnectivityTable.fan_out_synapse_addr
+
+## initialize a list of all SpikingNeuron objects
+sn_list =   [
+                []
+                for instance in range(num_instances)
+            ]
+for instance in range(num_instances):
+    for i in neuron_indices:
+        sn = SNN.SpikingNeuron( layer_idx=ConnectivityTable.layer_num[i],
+                                neuron_idx=i, 
+                                fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
+                                fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
+                                tau_u=tau_u,
+                                tau_v=tau_v,
+                                threshold=vth_low,
+                                duration=duration,
+                                max_num_fires=max_num_fires,
+                                training_on=0,
+                                supervised=0
+                                )
+        # chekc if neuron is in the input layer
+        if sn.layer_idx == 0:
+            sn.training_on = 0
+
+        # check if neuron is in the output layer 
+        if sn.layer_idx == num_layers - 1:
+            sn.threshold = vth_high
+            sn.training_on = supervised_training_on
+            sn.supervised = 1
+            
+        sn_list[instance].append(sn)
+######################################################################################
+#%% Inter-neuron data Initialization
+######################################################################################
+fired_synapse_list =    [
+                            [
+                                [] for step in range(0, sn.duration, sn.dt)
+                            ]
+                            for instance in range(num_instances)
+                        ]   # num_instances x num_timesteps x num_fired_synapses
+
+fired_neuron_list =    [
+                            [
+                                [] for step in range(0, sn.duration, sn.dt)
+                            ]
+                            for instance in range(num_instances)
+                        ]   # num_instances x num_timesteps x num_fired_neurons
+
+spike_info = [
+                [
+                    {    
+                        "fired_synapse_addr": [],
+                        "time"              : None
+                    }
+                    for step in range(0, sn.duration, sn.dt)
+                ] for instance in range(num_instances)
+             ]            
+             # a list of dictionaries sorted by time steps
+
+## Initialize statistics
+output_neuron_fire_info =   [
+                                {
+                                    "neuron_idx":   [],
+                                    "time"      :   []
+                                } 
+                                for instance in range(num_instances)
+                            ]   
+
+inference_correct =     [    
+                            None for instance in range(num_instances) 
+                        ]   # num_instances
+#%% Simulation Loop
+######################################################################################
+correct_cnt = 0
+for instance in range(num_instances):
+    f_handle.write("---------------Instance {} {} -----------------\n".format(instance,stimulus_time_vector[instance]["in_pattern"]))
+    for sim_point in range(0, sn.duration, sn.dt):
+        # first check if any input synpase fires at this time step
+        if sim_point in stimulus_time_vector[instance]["in_latency"]:
+            fired_synapse_list[instance][sim_point].extend(
+                index_duplicate(stimulus_time_vector[instance]["in_latency"], sim_point)
+            )
+            spike_info[instance][sim_point]["fired_synapse_addr"].extend(
+                index_duplicate(stimulus_time_vector[instance]["in_latency"], sim_point)
+            )
+
+        spike_info[instance][sim_point]["time"] = sim_point
+        
+        for i in neuron_indices:
+            sn_list[instance][i].accumulate(sim_point=sim_point, 
+                                    spike_in_info=spike_info[instance][sim_point], 
+                                    WeightRAM_inst=WeightRAM,
+                                    debug_mode=debug_mode,
+                                    instance=instance,
+                                    f_handle=f_handle
+                                    )                               
+            
+            # upadate the current potential to PotentialRAM
+            PotentialRAM.potential[instance][i] = sn_list[instance][i].v[sim_point]
+            
+            # update the list of synapses that fired at this sim_point
+            if (sn_list[instance][i].fire_cnt != -1):
+                if (sn_list[instance][i].spike_out_info[sn_list[instance][i].fire_cnt]["time"] == sim_point):
+                    if (len(sn_list[instance][i].fan_out_synapse_addr) == 1): # if single fan-out
+                        fired_synapse_list[instance][sim_point].append(val)
+                        spike_info[instance][sim_point]["fired_synapse_addr"].append(val)
+                    else:   # if multiple fan-out synpases
+                        for key,val in enumerate(sn_list[instance][i].fan_out_synapse_addr):
+                            fired_synapse_list[instance][sim_point].append(val)
+                            spike_info[instance][sim_point]["fired_synapse_addr"].append(val)
+                    
+                    fired_neuron_list[instance][sim_point].append(sn_list[instance][i].neuron_idx)
+
+                    # if the fired neuron at this sim_point is in the output layer
+                    if (sn_list[instance][i].layer_idx == num_layers - 1):
+                        output_neuron_fire_info[instance]["neuron_idx"].append(sn_list[instance][i].neuron_idx)
+                        output_neuron_fire_info[instance]["time"].append(sim_point)
+
+    # at the end of the simulation duration, inspect output-layer firing info         
+    if len(output_neuron_fire_info[instance]["neuron_idx"]) > 0:
+        # find the minimum of firing time and its corresponding list index
+        min_fire_time = min(output_neuron_fire_info[instance]["time"])
+        list_min_idx = index_duplicate(output_neuron_fire_info[instance]["time"], min_fire_time)
+        f2f_neuron_idx =    [
+                                output_neuron_fire_info[instance]["neuron_idx"][list_idx]
+                                for list_idx in list_min_idx
+                            ] 
+
+        # find the non-F2F neurons that fired within separation window
+        non_f2f_neuron_idx = [  
+                                neuron_idx
+                                for list_idx, neuron_idx in enumerate(output_neuron_fire_info[instance]["neuron_idx"])
+                                if output_neuron_fire_info[instance]["time"][list_idx] - min_fire_time > 0
+                                and output_neuron_fire_info[instance]["time"][list_idx] - min_fire_time <= separation_window
+                                ]
+
+        # more than one output layer neuron have fired at the same min_fire_time
+        if len(list_min_idx) > 1:       
+            correct_cnt = 0
+            inference_correct[instance] = 0
+            
+            if supervised_training_on == 1:
+                # iterate through all the f2f neuron index
+                for neuron_idx in f2f_neuron_idx:
+                    isf2f = 1
+                    sn = sn_list[instance][neuron_idx]
+                    
+                    # if the f2f neuron is the intended, F2F P+ quadrant
+                    if neuron_idx == desired_ff_neuron[instance]["ff_neuron"]:
+                        reward_signal = 1
+                        isIntended = 1
+                        newWeight = sn.BRRC_training(
+                                                    spike_ref_time=sn.causal_spike_in_info["time"],
+                                                    spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                    instance=instance,
+                                                    oldWeight=sn.oldWeight,
+                                                    causal_fan_in_addr=sn.causal_fan_in_addr,
+                                                    f_handle=f_handle,
+                                                    reward_signal=reward_signal, 
+                                                    isf2f=isf2f, isIntended=isIntended,
+                                                    successive_correct_cnt=correct_cnt,
+                                                    coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                    debug=1
+                                                    )
+                        sn.updateWeight(fan_in_addr=sn.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+
+                    # if the f2f neuron is not the intended, F2F P- quadrant                                
+                    else:
+                        reward_signal = 0
+                        isIntended = 0
+                        newWeight = sn.BRRC_training(
+                                                    spike_ref_time=sn.causal_spike_in_info["time"],
+                                                    spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                    instance=instance,
+                                                    oldWeight=sn.oldWeight,
+                                                    causal_fan_in_addr=sn.causal_fan_in_addr,
+                                                    f_handle=f_handle,
+                                                    reward_signal=reward_signal, 
+                                                    isf2f=isf2f, isIntended=isIntended,
+                                                    successive_correct_cnt=correct_cnt,
+                                                    coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                    debug=1
+                                                    )
+                        sn.updateWeight(fan_in_addr=sn.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
+        
+        # only one output layer neuron fired at the min_fire_time             
+        elif len(list_min_idx) == 1:
+            neuron_idx = f2f_neuron_idx[0]
+            sn = sn_list[instance][neuron_idx] 
+            
+            # if the F2F neuron is the intended 
+            if neuron_idx == desired_ff_neuron[instance]["ff_neuron"]:
+                correct_cnt += 1
+                inference_correct[instance] = 1
+            
+                if supervised_training_on == 1:    
+                    # F2F P+ quadrant 
+                    isf2f = 1
+                    reward_signal = 1
+                    isIntended = 1
+                    newWeight = sn.BRRC_training(
+                                                spike_ref_time=sn.causal_spike_in_info["time"],
+                                                spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                instance=instance,
+                                                oldWeight=sn.oldWeight,
+                                                causal_fan_in_addr=sn.causal_fan_in_addr,
+                                                f_handle=f_handle,
+                                                reward_signal=reward_signal, 
+                                                isf2f=isf2f, isIntended=isIntended,
+                                                successive_correct_cnt=correct_cnt,
+                                                coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                debug=1
+                                                )
+                    sn.updateWeight(fan_in_addr=sn.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
+                    
+                    # then non-F2F P+ quadrant
+                    if len(non_f2f_neuron_idx) > 0:
+                        isf2f = 0
+                        reward_signal = 1
+                        isIntended = 0
+                        for neuron_idx in non_f2f_neuron_idx:
+                            sn_nonf2f = sn_list[instance][neuron_idx] 
+                            newWeight = sn_nonf2f.BRRC_training(
+                                                        spike_ref_time=min_fire_time,
+                                                        spike_out_time=sn_nonf2f.spike_out_info[0]["time"],                        
+                                                        instance=instance,
+                                                        oldWeight=sn_nonf2f.oldWeight,
+                                                        causal_fan_in_addr=sn_nonf2f.causal_fan_in_addr,
+                                                        f_handle=f_handle,
+                                                        reward_signal=reward_signal, 
+                                                        isf2f=isf2f, isIntended=isIntended,
+                                                        successive_correct_cnt=correct_cnt,
+                                                        coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                        debug=1
+                                                        )
+                            sn_nonf2f.updateWeight(fan_in_addr=sn_nonf2f.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
+
+            
+            # if the F2F neuron is not the intended
+            else:
+                correct_cnt = 0
+                inference_correct[instance] = 0
+                
+                if supervised_training_on == 1:
+                    # F2F P- quadrant 
+                    isf2f = 1
+                    reward_signal = 0
+                    isIntended = 0
+                    newWeight = sn.BRRC_training(
+                                                spike_ref_time=sn.causal_spike_in_info["time"],
+                                                spike_out_time=sn.spike_out_info[0]["time"],                        
+                                                instance=instance,
+                                                oldWeight=sn.oldWeight,
+                                                causal_fan_in_addr=sn.causal_fan_in_addr,
+                                                f_handle=f_handle,
+                                                reward_signal=reward_signal, 
+                                                isf2f=isf2f, isIntended=isIntended,
+                                                successive_correct_cnt=correct_cnt,
+                                                coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                debug=1
+                                                )
+                    sn.updateWeight(fan_in_addr=sn.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                        
+                    
+                    # then non-F2F P- quadrant, only applied on the intended F2F neuron
+                    isf2f = 0
+                    reward_signal = 0
+                    isIntended = 1
+                    neuron_idx = desired_ff_neuron[instance]["ff_neuron"]
+                    sn_intended = sn_list[instance][neuron_idx]
+                    if sn_intended.fire_cnt != -1:
+                        sn_intended_out_time = sn_intended.spike_out_info[0]["time"]
+                    else:
+                        sn_intended_out_time = None                       
+                    newWeight = sn_intended.BRRC_training(
+                                                spike_ref_time=min_fire_time,
+                                                spike_out_time=sn_intended_out_time,                      
+                                                instance=instance,
+                                                oldWeight=sn_intended.oldWeight,
+                                                causal_fan_in_addr=sn_intended.causal_fan_in_addr,
+                                                f_handle=f_handle,
+                                                reward_signal=reward_signal, 
+                                                isf2f=isf2f, isIntended=isIntended,
+                                                successive_correct_cnt=correct_cnt,
+                                                coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                debug=1
+                                                )
+                    sn_intended.updateWeight(fan_in_addr=sn_intended.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
+            
+    else:
+    # no output layer neuron has fired
+        correct_cnt=0
+        inference_correct[instance] = 0
+        f_handle.write("Instance {}: no output layer neuron has fired up until sim_point{}!\n"
+        .format(instance, sim_point))
+        print("Instance {}: no output layer neuron has fired up until sim_point{}!"
+        .format(instance, sim_point))
+
+        # non-F2F P- update on the desired 
+        isf2f = 0
+        reward_signal = 0
+        isIntended = 1
+        neuron_idx = desired_ff_neuron[instance]["ff_neuron"]
+        sn_intended = sn_list[instance][neuron_idx]
+        if sn_intended.fire_cnt != -1:
+            sn_intended_out_time = sn_intended.spike_out_info[0]["time"]
+        else:
+            sn_intended_out_time = None                       
+        newWeight = sn_intended.BRRC_training(
+                                    spike_ref_time=min_fire_time,
+                                    spike_out_time=sn_intended_out_time,                        
+                                    instance=instance,
+                                    oldWeight=sn_intended.oldWeight,
+                                    causal_fan_in_addr=sn_intended.causal_fan_in_addr,
+                                    f_handle=f_handle,
+                                    reward_signal=reward_signal, 
+                                    isf2f=isf2f, isIntended=isIntended,
+                                    successive_correct_cnt=correct_cnt,
+                                    coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                    debug=1
+                                    )
+        sn_intended.updateWeight(fan_in_addr=sn_intended.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
+
+    f_handle.write("Succesive correct count: {}\n".format(correct_cnt))
+    f_handle.write("-------------------------------------------------\n")
+
+    if correct_cnt == stop_num and supervised_training_on:
+        print("Supervised Training stops at Instance {} because successive correct count has reached {}"
+                .format(instance, correct_cnt))
+        break
+print("inference_correct list = \n{}\n".format(inference_correct))
+
+#%% 
+if plot_response:
+    plotNeuronResponse_iterative(sn_list=sn_list, neuron_list=[8,9,10], instance_list = [0, instance])
+    plt.show()
+print("End of Program!")
+
+#%% Dump initial weight vector and final weightRAM
+f_handle.write("***************************Weight Change*********************\n")
+f_handle.write("Synapse\t\t InitialWeight\t\t FinalWeight\t\t\n")
+
+for synapse_addr in WeightRAM.synapse_addr:
+    f_handle.write("{}\t\t {}\t\t\t {}\t\t\n"
+                .format(synapse_addr, weight_vector[synapse_addr], WeightRAM.weight[synapse_addr]))
+f_handle.write("************************************************************\n")
+f_handle.close()

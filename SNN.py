@@ -404,8 +404,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                 kernel_other_pos="exponential", kernel_intended_neg="exponential",
                                 A_coarse_comp=5, A_fine_comp=2,
                                 tau_long=10, tau_short=4, 
-                                A_coarse=4, A_fine=1,
-                                tau=14, 
+                                A_coarse=2, A_fine=1,
+                                tau=11, 
                                 t_start=4, t_end=200, A_coarse_rect=1, A_fine_rect=0,
                                 max_weight=15, min_weight=0,
                                 debug=0): 
@@ -495,13 +495,13 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 if reward_signal and not isIntended:
                     if kernel_other_pos=="composite-exponential":
                         deltaWeight = \
-                            -A_comp * (
+                            -A_coarse_comp * (
                                     math.exp(-(spike_out_time - spike_ref_time)/tau_long)
                                     - math.exp(-(spike_out_time - spike_ref_time)/tau_short)
                                 )
                     elif kernel_other_pos=="exponential":
                         deltaWeight = \
-                            -A * (
+                            -A_coarse * (
                                     math.exp(-(spike_out_time - spike_ref_time)/tau)
                                 )
                     elif not kernel_other_pos in kernel_list:

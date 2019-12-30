@@ -119,7 +119,7 @@ def BimodalLatency(latency_mode, mean_early, std_early, mean_late, std_late, low
     
 def getInLatencies(in_pattern, num_in_neurons, 
                     mean_early, std_early, mean_late, std_late, low_lim=0, high_lim=64):
-    in_pattern_list = ["O", "X", "<<", "//", ">>"]
+    in_pattern_list = ["O", "X", "<<", "//", ">>", "UA", "DA", "BS"]
     if not in_pattern in in_pattern_list:
         print("Error when calling getInLatencies: illegal specification of \"in_pattern\"")
         exit(1)
@@ -150,6 +150,18 @@ def getInLatencies(in_pattern, num_in_neurons,
         for i in [2, 3, 4, 5]:
             InLatencies[i] = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)    
+    elif in_pattern == "UA":
+        for i in [0, 2, 5, 7]:
+            InLatencies[i] = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)    
+    elif in_pattern == "DA":
+        for i in [1, 3, 4, 6]:
+            InLatencies[i] = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)    
+    elif in_pattern == "BS":
+        for i in [4, 5, 6, 7]:
+            InLatencies[i] = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)    
 
     return InLatencies
 
@@ -162,7 +174,7 @@ num_neurons_perLayer = [8,5]                           # Assuming num_neurons_pe
 max_num_fires = 1
 
 ## Specify common Spiking Neuron Parameters
-duration = 200
+duration = 80
 tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 vth_low = 1
@@ -170,12 +182,12 @@ vth_high = 140
 
 ## Supervised Training Parameters
 supervised_training_on = 1      # turn on/off supervised training 
-separation_window = 16
-stop_num = 20
-coarse_fine_ratio=0.5
+separation_window = 12
+stop_num = 50
+coarse_fine_ratio=0.2
 
 ## Training Dataset Parameters
-num_instances =500              # number of training instances per epoch
+num_instances =5000              # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
@@ -192,10 +204,10 @@ f_handle = open(printout_dir, "w+")
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-mean_early = 2*tau_u
-std_early = int(2*tau_u/3)
-mean_late = 3*2*tau_u
-std_late = int(2*tau_u/3)
+mean_early = 0*2*tau_u + 1*tau_u
+std_early = int(2*tau_u/4)
+mean_late = 4*2*tau_u - 1*tau_u
+std_late = int(2*tau_u/4)
 
 initial_weight = [6] * num_neurons_perLayer[-2] * num_neurons_perLayer[-1] 
 weight_vector = \
@@ -208,11 +220,14 @@ input_patterns = ("O", "X", "<<", "//", ">>")
 
 output_pattern = \
     {
-        "O"     :   sum(num_neurons_perLayer[0:-1]),
-        "X"     :   sum(num_neurons_perLayer[0:-1]) + 1,
+        "O"      :   sum(num_neurons_perLayer[0:-1]),
+        "X"      :   sum(num_neurons_perLayer[0:-1]) + 1,
         "<<"     :   sum(num_neurons_perLayer[0:-1]) + 2,
         "//"     :   sum(num_neurons_perLayer[0:-1]) + 3,
-        ">>"     :   sum(num_neurons_perLayer[0:-1]) + 4
+        ">>"     :   sum(num_neurons_perLayer[0:-1]) + 4,
+        "UA"     :   sum(num_neurons_perLayer[0:-1]) + 5,
+        "DA"     :   sum(num_neurons_perLayer[0:-1]) + 6,
+        "BS"     :   sum(num_neurons_perLayer[0:-1]) + 7
     }
 
 ## Create stimulus spikes at the inuput layer (layer 0)

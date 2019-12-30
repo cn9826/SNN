@@ -183,7 +183,7 @@ vth_high = 140
 ## Supervised Training Parameters
 supervised_training_on = 1      # turn on/off supervised training 
 separation_window = 12
-stop_num = 50
+stop_num = 100
 coarse_fine_ratio=0.2
 
 ## Training Dataset Parameters
@@ -191,7 +191,7 @@ num_instances =3000              # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
-plot_response = 1
+plot_response = 0
 
 if supervised_training_on:
     printout_dir = printout_dir + "Supervised/BRRC/dumpsim.txt"
@@ -204,10 +204,10 @@ f_handle = open(printout_dir, "w+")
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-mean_early = 0*2*tau_u + 1*tau_u
-std_early = int(2*tau_u/4)
-mean_late = 4*2*tau_u - 1*tau_u
-std_late = int(2*tau_u/4)
+mean_early = 0*2*tau_u + 0.5*tau_u
+std_early = int(2*tau_u/3)
+mean_late = 4*2*tau_u - 0.5*tau_u
+std_late = int(2*tau_u/3)
 
 initial_weight = [6] * num_neurons_perLayer[-2] * num_neurons_perLayer[-1] 
 weight_vector = \

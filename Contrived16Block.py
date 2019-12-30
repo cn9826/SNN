@@ -184,7 +184,7 @@ vth_high = 140
 supervised_training_on = 1      # turn on/off supervised training 
 separation_window = 12
 stop_num = 100
-coarse_fine_ratio=0.2
+coarse_fine_ratio=0.8
 
 ## Training Dataset Parameters
 num_instances =3000              # number of training instances per epoch

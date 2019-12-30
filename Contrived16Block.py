@@ -187,7 +187,7 @@ stop_num = 50
 coarse_fine_ratio=0.2
 
 ## Training Dataset Parameters
-num_instances =5000              # number of training instances per epoch
+num_instances =3000              # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1

@@ -204,9 +204,9 @@ f_handle = open(printout_dir, "w+")
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-mean_early = 0*2*tau_u + 0.5*tau_u
+mean_early = 0*2*tau_u + 0*tau_u
 std_early = int(2*tau_u/3)
-mean_late = 4*2*tau_u - 0.5*tau_u
+mean_late = 4*2*tau_u - 0*tau_u
 std_late = int(2*tau_u/3)
 
 initial_weight = [6] * num_neurons_perLayer[-2] * num_neurons_perLayer[-1] 

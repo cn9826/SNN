@@ -187,7 +187,7 @@ stop_num = 100
 coarse_fine_ratio=0.8
 
 ## Training Dataset Parameters
-num_instances =3000              # number of training instances per epoch
+num_instances =1000              # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
@@ -204,9 +204,9 @@ f_handle = open(printout_dir, "w+")
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-mean_early = 0*2*tau_u + 0*tau_u
+mean_early = 0*2*tau_u + 2*tau_u
 std_early = int(2*tau_u/3)
-mean_late = 4*2*tau_u - 0*tau_u
+mean_late = 4*2*tau_u - 2*tau_u
 std_late = int(2*tau_u/3)
 
 initial_weight = [6] * num_neurons_perLayer[-2] * num_neurons_perLayer[-1] 
@@ -248,7 +248,7 @@ for instance in range(num_instances):
                            num_in_neurons=num_neurons_perLayer[0],
                            mean_early=mean_early, std_early=std_early,
                            mean_late=mean_late, std_late=std_late,
-                           low_lim=0, high_lim=4*2*tau_u  
+                           low_lim=0, high_lim=mean_late+2*tau_u  
                            )
 
 
@@ -427,6 +427,7 @@ inference_correct =     [
 #%% Simulation Loop
 ######################################################################################
 correct_cnt = 0
+max_correct_cnt = 0
 for instance in range(num_instances):
     f_handle.write("---------------Instance {} {} -----------------\n".format(instance,stimulus_time_vector[instance]["in_pattern"]))
     for sim_point in range(0, sn.duration, sn.dt):
@@ -505,7 +506,7 @@ for instance in range(num_instances):
                         reward_signal = 1
                         isIntended = 1
                         newWeight = sn.BRRC_training(
-                                                    spike_ref_time=sn.causal_spike_in_info["time"],
+                                                    spike_ref_time=min_fire_time,
                                                     spike_out_time=sn.spike_out_info[0]["time"],                        
                                                     instance=instance,
                                                     oldWeight=sn.oldWeight,
@@ -537,7 +538,36 @@ for instance in range(num_instances):
                                                     debug=1
                                                     )
                         sn.updateWeight(fan_in_addr=sn.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
-        
+                    # apply Non-F2F P- upadate only on the desired neuron 
+                    if not desired_ff_neuron[instance]["ff_neuron"] in f2f_neuron_idx:
+                        isf2f = 0
+                        reward_signal = 0
+                        isIntended = 1
+                        intended_idx = desired_ff_neuron[instance]["ff_neuron"]
+                        sn_intended = sn_list[instance][intended_idx]
+                        # prepare information needed for weight update
+                        if sn_intended.fire_cnt != -1:
+                            sn_intended_out_time = sn_intended.spike_out_info[0]["time"]
+                        else:
+                            sn_intended_out_time = None
+                        (intended_updateAddr, intended_oldWeight, causal_in_time) = \
+                            sn_intended.spike_in_cache.getUpdateAddr(isf2f, reward_signal, isIntended)
+                        
+                        newWeight = sn_intended.BRRC_training(
+                                                    spike_ref_time=min_fire_time,
+                                                    spike_out_time=sn_intended_out_time,                      
+                                                    instance=instance,
+                                                    oldWeight=intended_oldWeight,
+                                                    causal_fan_in_addr=intended_updateAddr,
+                                                    f_handle=f_handle,
+                                                    reward_signal=reward_signal, 
+                                                    isf2f=isf2f, isIntended=isIntended,
+                                                    successive_correct_cnt=correct_cnt,
+                                                    coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                    debug=1
+                                                    )
+                        sn_intended.updateWeight(fan_in_addr=intended_updateAddr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
+                        
         # only one output layer neuron fired at the min_fire_time             
         elif len(list_min_idx) == 1:
             neuron_idx = f2f_neuron_idx[0]
@@ -620,18 +650,22 @@ for instance in range(num_instances):
                     isf2f = 0
                     reward_signal = 0
                     isIntended = 1
-                    neuron_idx = desired_ff_neuron[instance]["ff_neuron"]
-                    sn_intended = sn_list[instance][neuron_idx]
+                    intended_idx = desired_ff_neuron[instance]["ff_neuron"]
+                    sn_intended = sn_list[instance][intended_idx]
+                    # prepare information needed for weight update
                     if sn_intended.fire_cnt != -1:
                         sn_intended_out_time = sn_intended.spike_out_info[0]["time"]
                     else:
-                        sn_intended_out_time = None                       
+                        sn_intended_out_time = None
+                    (intended_updateAddr, intended_oldWeight, causal_in_time) = \
+                        sn_intended.spike_in_cache.getUpdateAddr(isf2f, reward_signal, isIntended)
+                    
                     newWeight = sn_intended.BRRC_training(
                                                 spike_ref_time=min_fire_time,
                                                 spike_out_time=sn_intended_out_time,                      
                                                 instance=instance,
-                                                oldWeight=sn_intended.oldWeight,
-                                                causal_fan_in_addr=sn_intended.causal_fan_in_addr,
+                                                oldWeight=intended_oldWeight,
+                                                causal_fan_in_addr=intended_updateAddr,
                                                 f_handle=f_handle,
                                                 reward_signal=reward_signal, 
                                                 isf2f=isf2f, isIntended=isIntended,
@@ -639,7 +673,7 @@ for instance in range(num_instances):
                                                 coarse_fine_cut_off=stop_num*coarse_fine_ratio,
                                                 debug=1
                                                 )
-                    sn_intended.updateWeight(fan_in_addr=sn_intended.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
+                    sn_intended.updateWeight(fan_in_addr=intended_updateAddr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
             
     else:
     # no output layer neuron has fired
@@ -660,12 +694,20 @@ for instance in range(num_instances):
             sn_intended_out_time = sn_intended.spike_out_info[0]["time"]
         else:
             sn_intended_out_time = None                       
+        # prepare information needed for weight update
+        if sn_intended.fire_cnt != -1:
+            sn_intended_out_time = sn_intended.spike_out_info[0]["time"]
+        else:
+            sn_intended_out_time = None
+        (intended_updateAddr, intended_oldWeight, causal_in_time) = \
+            sn_intended.spike_in_cache.getUpdateAddr(isf2f, reward_signal, isIntended)
+        
         newWeight = sn_intended.BRRC_training(
                                     spike_ref_time=min_fire_time,
-                                    spike_out_time=sn_intended_out_time,                        
+                                    spike_out_time=sn_intended_out_time,                      
                                     instance=instance,
-                                    oldWeight=sn_intended.oldWeight,
-                                    causal_fan_in_addr=sn_intended.causal_fan_in_addr,
+                                    oldWeight=intended_oldWeight,
+                                    causal_fan_in_addr=intended_updateAddr,
                                     f_handle=f_handle,
                                     reward_signal=reward_signal, 
                                     isf2f=isf2f, isIntended=isIntended,
@@ -673,7 +715,10 @@ for instance in range(num_instances):
                                     coarse_fine_cut_off=stop_num*coarse_fine_ratio,
                                     debug=1
                                     )
-        sn_intended.updateWeight(fan_in_addr=sn_intended.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
+        sn_intended.updateWeight(fan_in_addr=intended_updateAddr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
+    
+    if correct_cnt > max_correct_cnt:
+        max_correct_cnt = correct_cnt
 
     f_handle.write("Succesive correct count: {}\n".format(correct_cnt))
     f_handle.write("-------------------------------------------------\n")
@@ -682,6 +727,7 @@ for instance in range(num_instances):
         print("Supervised Training stops at Instance {} because successive correct count has reached {}"
                 .format(instance, correct_cnt))
         break
+f_handle.write("Maximum successive correct count:{}\n".format(max_correct_cnt))
 print("inference_correct list = \n{}\n".format(inference_correct))
 
 

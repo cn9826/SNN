@@ -47,6 +47,36 @@ class PotentialRAM:  # indexed by neuron_idx
                                         for row in range(num_neurons)    
                                     ]
 
+class SpikeIncache:
+    def __init__(self, depth=8, ptr_offset = -4):
+        self.depth = depth
+        self.ptr_offset = ptr_offset
+        self.write_ptr = 0
+        self.mem =  [
+                        {
+                            "fired_synapse_addr"    :   None,
+                            "weight"                :   None,
+                            "time"                  :   None
+                        } for entry in range(depth)
+                    ]
+    def writeSpikeInInfo(self, fired_synapse_addr, time, weight):
+        # write first 
+        self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
+        self.mem[self.write_ptr]["time"] = time
+        self.mem[self.write_ptr]["weight"] = weight
+        # then increment write_ptr
+        if self.write_ptr == self.depth - 1:
+            self.write_ptr = 0
+        else:
+            self.write_ptr += 1
+
+    def getUpdateAddr(self, isf2f, reward_signal, isIntended):
+        # to deal with non-F2F P- learning on the intended neuron
+        if not isf2f and not reward_signal and isIntended: 
+            mem_idx = (self.write_ptr + self.ptr_offset - 1) % self.depth
+        else:
+            mem_idx = self.write_ptr - 1
+        return (self.mem[mem_idx]["fired_synapse_addr"], self.mem[mem_idx]["weight"], self.mem[mem_idx]["time"])
 
 class SpikingNeuron:   # this class can be viewed as the functional unit that updates neuron states
     # shared Class Variables
@@ -78,7 +108,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
 
         self.last_spike_in_info = []        # the last in-spike that contributed to the output spike
         self.causal_spike_in_info = []      # the causal in-spike info
-
+        self.spike_in_cache = SpikeIncache()
         self.oldWeight = None               # the weight that are associated with the causal in-spike that causes the out-spike 
                                             # an int 
                                             
@@ -149,7 +179,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 if kernel == "exponential":
                     deltaWeight_Hebbian = A_di * \
                         math.exp(-(spike_out_time-spike_in_time)/tau)
-                return int(deltaWeight_Hebbian)
+                return round(deltaWeight_Hebbian)
 
         newWeight = [None]*len(oldWeight)
         # check if coarse update is necessary
@@ -235,7 +265,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         for i in range(len(newWeight)):
             if spike_in_time > spike_out_time:
                 if kernel == "exponential":
-                    deltaWeight =  -1 * int(A_di * math.exp((spike_out_time-spike_in_time)/tau_neg))
+                    deltaWeight =  -1 * round(A_di * math.exp((spike_out_time-spike_in_time)/tau_neg))
                 elif kernel == "rectangle":
                     deltaWeight = -1 * A_di
                 newWeight[i] = oldWeight[i] + deltaWeight
@@ -249,7 +279,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             
             elif spike_in_time <= spike_out_time:
                 if kernel == "exponential":
-                    deltaWeight = int(A_di * math.exp((spike_out_time-spike_in_time)/tau_neg))
+                    deltaWeight = round(A_di * math.exp((spike_out_time-spike_in_time)/tau_neg))
                 elif kernel == "rectangle":
                     deltaWeight = A_di
                 newWeight[i] = oldWeight[i] + deltaWeight                
@@ -314,7 +344,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                         print("Error: kernel1 is not in the kernel list!")
                         exit(1)
 
-                    newWeight[i] = oldWeight[i] + int(deltaWeight)
+                    newWeight[i] = oldWeight[i] + round(deltaWeight)
                     newWeight[i] = clip_newWeight(newWeight[i])
 
                     if debug and kernel1 in kernel_list:
@@ -337,7 +367,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                         print("Error: kernel4 is not in the kernel list!")
                         exit(1)
 
-                    newWeight[i] = oldWeight[i] + int(deltaWeight)
+                    newWeight[i] = oldWeight[i] + round(deltaWeight)
                     newWeight[i] = clip_newWeight(newWeight[i])
     
                     if debug and kernel4 in kernel_list:
@@ -362,7 +392,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                         print("Error: kernel3 is not in the kernel list!")
                         exit(1)
 
-                    newWeight[i] = oldWeight[i] + int(deltaWeight)
+                    newWeight[i] = oldWeight[i] + round(deltaWeight)
                     newWeight[i] = clip_newWeight(newWeight[i])
         
                     if debug and kernel3 in kernel_list:
@@ -386,7 +416,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                         print("Error: kernel2 is not in the kernel list!")
                         exit(1)
 
-                    newWeight[i] = oldWeight[i] + int(deltaWeight)
+                    newWeight[i] = oldWeight[i] + round(deltaWeight)
                     newWeight[i] = clip_newWeight(newWeight[i])
         
                     if debug and kernel2 in kernel_list:
@@ -405,7 +435,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                 A_coarse_comp=5, A_fine_comp=2,
                                 tau_long=10, tau_short=4, 
                                 A_coarse=2, A_fine=1,
-                                tau=11, 
+                                tau=9, 
                                 t_start=4, t_end=200, A_coarse_rect=1, A_fine_rect=0,
                                 max_weight=15, min_weight=1,
                                 debug=0): 
@@ -460,7 +490,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                         print("Error when calling BRRC_training: kernel_f2f_pos is not in the kernel list!")
                         exit(1)
 
-                    newWeight = oldWeight + int(deltaWeight)
+                    newWeight = oldWeight + round(deltaWeight)
                     newWeight = clip_newWeight(newWeight)
                     if debug:
                         f_handle.write("Instance {}: F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
@@ -482,7 +512,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                         print("Error when calling BRRC_training: kernel_f2f_neg is not in the kernel list!")
                         exit(1)
 
-                    newWeight = oldWeight + int(deltaWeight)
+                    newWeight = oldWeight + round(deltaWeight)
                     newWeight = clip_newWeight(newWeight)
 
                     if debug:
@@ -495,20 +525,20 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 if reward_signal and not isIntended:
                     if kernel_other_pos=="composite-exponential":
                         deltaWeight = \
-                            -A_coarse_comp * (
+                            -A_comp * (
                                     math.exp(-(spike_out_time - spike_ref_time)/tau_long)
                                     - math.exp(-(spike_out_time - spike_ref_time)/tau_short)
                                 )
                     elif kernel_other_pos=="exponential":
                         deltaWeight = \
-                            -A_coarse * (
+                            -A * (
                                     math.exp(-(spike_out_time - spike_ref_time)/tau)
                                 )
                     elif not kernel_other_pos in kernel_list:
                         print("Error when calling BRRC_training: kernel_other_pos is not in the kernel list!")
                         exit(1)
 
-                    newWeight = oldWeight + int(deltaWeight)
+                    newWeight = oldWeight + round(deltaWeight)
                     newWeight = clip_newWeight(newWeight)
 
                     if debug:
@@ -537,7 +567,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     else:
                         deltaWeight = 1
                     
-                    newWeight = oldWeight + int(deltaWeight)
+                    newWeight = oldWeight + round(deltaWeight)
                     newWeight = clip_newWeight(newWeight)
                     if debug:
                         f_handle.write("Instance {}: Non-F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
@@ -575,7 +605,13 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 # and the associated weights for weight updates
                 self.relavent_fan_in_addr = relavent_fan_in_addr
                 self.last_spike_in_info = spike_in_info 
-                
+                for i in range(len(relavent_fan_in_addr)):
+                    self.spike_in_cache.writeSpikeInInfo(
+                                        fired_synapse_addr=relavent_fan_in_addr[i],
+                                        time=sim_point,
+                                        weight = weight[i]   
+                                        )
+
                 if self.fire_cnt == -1:
                 # only update causal_spike_in_info when the neuron has not fired
                     # choose the latest in-spike to be considered as the causal one

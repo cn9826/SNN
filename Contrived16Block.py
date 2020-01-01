@@ -117,8 +117,9 @@ def BimodalLatency(latency_mode, mean_early, std_early, mean_late, std_late, low
             latency = high_lim
     return int(latency)
     
-def getInLatencies(in_pattern, num_in_neurons, 
+def getInLatencies(in_pattern, num_in_neurons, early_latency_list, late_latency_list,
                     mean_early, std_early, mean_late, std_late, low_lim=0, high_lim=64):
+
     in_pattern_list = ["O", "X", "<<", "//", ">>", "UA", "DA", "BS"]
     if not in_pattern in in_pattern_list:
         print("Error when calling getInLatencies: illegal specification of \"in_pattern\"")
@@ -129,48 +130,90 @@ def getInLatencies(in_pattern, num_in_neurons,
         latency_late = \
             BimodalLatency("late", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
         InLatencies[i] = latency_late
+        late_latency_list.append(latency_late)
 
     if in_pattern == "O":
         for i in [0, 3, 5, 6]:
-            InLatencies[i] = \
+            latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[i] = latency_early
+            early_latency_list.append(latency_early)
+
     elif in_pattern == "X":
         for i in [1, 2, 4, 7]:
-            InLatencies[i] = \
+            latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[i] = latency_early
+            early_latency_list.append(latency_early)
+
     elif in_pattern == "<<":
         for i in [0, 1, 6, 7]:
-            InLatencies[i] = \
+            latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[i] = latency_early
+            early_latency_list.append(latency_early)
+
     elif in_pattern == "//":
         for i in [0, 1, 2, 3]:
-            InLatencies[i] = \
-                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)    
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[i] = latency_early
+            early_latency_list.append(latency_early)
+
     elif in_pattern == ">>":
         for i in [2, 3, 4, 5]:
-            InLatencies[i] = \
-                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)    
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[i] = latency_early
+            early_latency_list.append(latency_early)
+
     elif in_pattern == "UA":
         for i in [0, 2, 5, 7]:
-            InLatencies[i] = \
-                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)    
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[i] = latency_early
+            early_latency_list.append(latency_early)
+
     elif in_pattern == "DA":
         for i in [1, 3, 4, 6]:
-            InLatencies[i] = \
-                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)    
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[i] = latency_early
+            early_latency_list.append(latency_early)
+
     elif in_pattern == "BS":
         for i in [4, 5, 6, 7]:
-            InLatencies[i] = \
-                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)    
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[i] = latency_early
+            early_latency_list.append(latency_early)
 
-    return InLatencies
+    return (InLatencies, early_latency_list, late_latency_list)
+
+def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_bins=8):
+    fig, ax = plt.subplots(figsize=(14,7))
+    early_list_tau = [latency / tau_u for latency in early_latency_list]
+    late_list_tau = [latency / tau_u for latency in late_latency_list]
+    ax.hist([early_list_tau, late_list_tau], bins=num_bins, label=['early latency','late latency'],
+            edgecolor='k')
+
+    ax.set_title('Stimulus Spike Latency Distribution in units of ' + r'$\tau_u$'
+                ,fontsize=18, fontweight='bold')
+    ax.axvline(x=num_bins/2, linewidth=2, color='k', linestyle='dashed')
+    min_ylim, max_ylim = ax.get_ylim()
+    ax.text(num_bins/2, max_ylim*0.8, r'early-late cutoff ${}\tau_u$'.format(int(num_bins/2)),
+            fontsize=12)
+    ax.set_xticks(range(0, num_bins+1))
+    xticklabel_list = [r'{}$\tau_u$'.format(i) for i in range(0, num_bins+1)]
+    ax.set_xticklabels(xticklabel_list)
+    ax.legend(fontsize=15)
 
 #%% Parameters to tune
 ######################################################################################
 printout_dir = "sim_printouts/Contrived16Block/"
 
 ## Specify Global Connectivity Parmeters
-num_neurons_perLayer = [8,5]                           # Assuming num_neurons_perLayer is the number of connections in FC case
+num_neurons_perLayer = [8,8]                           # Assuming num_neurons_perLayer is the number of connections in FC case
 max_num_fires = 1
 
 ## Specify common Spiking Neuron Parameters
@@ -183,15 +226,16 @@ vth_high = 140
 ## Supervised Training Parameters
 supervised_training_on = 1      # turn on/off supervised training 
 separation_window = 12
-stop_num = 100
-coarse_fine_ratio=0.8
+stop_num = 150
+coarse_fine_ratio=0.4
 
 ## Training Dataset Parameters
-num_instances =2000              # number of training instances per epoch
+num_instances =5000              # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
 plot_response = 0
+plot_InLatency = 1
 
 if supervised_training_on:
     printout_dir = printout_dir + "Supervised/BRRC/dumpsim.txt"
@@ -216,7 +260,7 @@ weight_vector = \
         *initial_weight
     ]
 
-input_patterns = ("O", "X", "<<", "//", ">>")
+input_patterns = ("O", "X", "<<", "//", ">>", "UA", "DA", "BS")
 
 output_pattern = \
     {
@@ -240,12 +284,16 @@ stimulus_time_vector = [
                             for instance in range(num_instances)
                        ]
 
+early_latency_list = []
+late_latency_list = []
 for instance in range(num_instances):
     stimulus_time_vector[instance]["in_pattern"] = \
             random.choice(input_patterns)
-    stimulus_time_vector[instance]["in_latency"] = \
+    stimulus_time_vector[instance]["in_latency"], early_latency_list, late_latency_list = \
             getInLatencies(in_pattern=stimulus_time_vector[instance]["in_pattern"],
                            num_in_neurons=num_neurons_perLayer[0],
+                           early_latency_list=early_latency_list,
+                           late_latency_list=late_latency_list,
                            mean_early=mean_early, std_early=std_early,
                            mean_late=mean_late, std_late=std_late,
                            low_lim=0, high_lim=mean_late+2*tau_u  
@@ -740,9 +788,12 @@ for synapse_addr in WeightRAM.synapse_addr:
                 .format(synapse_addr, weight_vector[synapse_addr], WeightRAM.weight[synapse_addr]))
 f_handle.write("************************************************************\n")
 f_handle.close()
-
+print("End of Program!")
 #%% 
 if plot_response:
     plotNeuronResponse_iterative(sn_list=sn_list, neuron_list=[8,9,10,11,12], instance_list = [0, instance])
+if plot_InLatency:
+    plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_bins=8)
+if plot_response or plot_InLatency:
     plt.show()
-print("End of Program!")
+

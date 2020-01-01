@@ -187,7 +187,7 @@ stop_num = 100
 coarse_fine_ratio=0.8
 
 ## Training Dataset Parameters
-num_instances =1000              # number of training instances per epoch
+num_instances =2000              # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
@@ -205,9 +205,9 @@ f_handle = open(printout_dir, "w+")
 ######################################################################################
 ## Define Input & Output Patterns
 mean_early = 0*2*tau_u + 2*tau_u
-std_early = int(2*tau_u/3)
+std_early = int(4*tau_u/3)
 mean_late = 4*2*tau_u - 2*tau_u
-std_late = int(2*tau_u/3)
+std_late = int(4*tau_u/3)
 
 initial_weight = [6] * num_neurons_perLayer[-2] * num_neurons_perLayer[-1] 
 weight_vector = \

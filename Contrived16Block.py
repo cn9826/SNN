@@ -120,7 +120,7 @@ def BimodalLatency(latency_mode, mean_early, std_early, mean_late, std_late, low
 def getInLatencies(in_pattern, num_in_neurons, early_latency_list, late_latency_list,
                     mean_early, std_early, mean_late, std_late, low_lim=0, high_lim=64):
 
-    in_pattern_list = ["O", "X", "<<", "//", ">>", "UA", "DA", "BS"]
+    in_pattern_list = ["O", "X", "<<", "//", ">>", "UA", "DA", "BS", "Bad//"]
     if not in_pattern in in_pattern_list:
         print("Error when calling getInLatencies: illegal specification of \"in_pattern\"")
         exit(1)
@@ -187,6 +187,12 @@ def getInLatencies(in_pattern, num_in_neurons, early_latency_list, late_latency_
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[i] = latency_early
             early_latency_list.append(latency_early)
+    elif in_pattern == "Bad//":
+        for i in [0, 1, 2, 6]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[i] = latency_early
+            early_latency_list.append(latency_early)
 
     return (InLatencies, early_latency_list, late_latency_list)
 
@@ -230,7 +236,7 @@ stop_num = 150
 coarse_fine_ratio=0.02
 
 ## Training Dataset Parameters
-num_instances =5000              # number of training instances per epoch
+num_instances =6000              # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
@@ -248,10 +254,10 @@ f_handle = open(printout_dir, "w+")
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-mean_early = 0*2*tau_u + 2.5*tau_u
-std_early = int(3*tau_u/3)
-mean_late = 4*2*tau_u - 2.5*tau_u
-std_late = int(3*tau_u/3)
+mean_early = 0*2*tau_u + 2*tau_u
+std_early = int(4*tau_u/3)
+mean_late = 4*2*tau_u - 2*tau_u
+std_late = int(4*tau_u/3)
 
 initial_weight = [6] * num_neurons_perLayer[-2] * num_neurons_perLayer[-1] 
 weight_vector = \
@@ -271,7 +277,9 @@ output_pattern = \
         ">>"     :   sum(num_neurons_perLayer[0:-1]) + 4,
         "UA"     :   sum(num_neurons_perLayer[0:-1]) + 5,
         "DA"     :   sum(num_neurons_perLayer[0:-1]) + 6,
-        "BS"     :   sum(num_neurons_perLayer[0:-1]) + 7
+        "BS"     :   sum(num_neurons_perLayer[0:-1]) + 7,
+        "Bad//"  :   sum(num_neurons_perLayer[0:-1]) + 8
+
     }
 
 ## Create stimulus spikes at the inuput layer (layer 0)

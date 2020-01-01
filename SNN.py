@@ -437,7 +437,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                 A_coarse=2, A_fine=1,
                                 tau=9, 
                                 t_start=4, t_end=200, A_coarse_rect=2, A_fine_rect=1,
-                                max_weight=8, min_weight=-8,
+                                max_weight=9, min_weight=-15,
                                 debug=0): 
 
             # isf2f is to indicate whether the neuron being processed is a first-to-spike one

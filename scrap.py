@@ -183,10 +183,10 @@ def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_
     ax.legend(fontsize=15)
 
 ## Define Input & Output Patterns
-mean_early = 0*2*tau_u + 2*tau_u
-std_early = int(4*tau_u/3)
-mean_late = 4*2*tau_u - 2*tau_u
-std_late = int(4*tau_u/3)
+mean_early = 0*2*tau_u + 3*tau_u
+std_early = int(3*tau_u/3)
+mean_late = 4*2*tau_u - 3*tau_u
+std_late = int(3*tau_u/3)
 
 initial_weight = [6] * num_neurons_perLayer[-2] * num_neurons_perLayer[-1] 
 weight_vector = \

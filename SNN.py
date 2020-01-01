@@ -436,8 +436,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                 tau_long=10, tau_short=4, 
                                 A_coarse=2, A_fine=1,
                                 tau=9, 
-                                t_start=4, t_end=200, A_coarse_rect=1, A_fine_rect=0,
-                                max_weight=9, min_weight=-9,
+                                t_start=4, t_end=200, A_coarse_rect=2, A_fine_rect=1,
+                                max_weight=8, min_weight=-8,
                                 debug=0): 
 
             # isf2f is to indicate whether the neuron being processed is a first-to-spike one
@@ -565,7 +565,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                             exit(1)
                     # if non-F2F intended neuron has not fired
                     else:
-                        deltaWeight = 1
+                        deltaWeight = 2
                     
                     newWeight = oldWeight + round(deltaWeight)
                     newWeight = clip_newWeight(newWeight)

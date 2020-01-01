@@ -227,7 +227,7 @@ vth_high = 140
 supervised_training_on = 1      # turn on/off supervised training 
 separation_window = 12
 stop_num = 150
-coarse_fine_ratio=0.4
+coarse_fine_ratio=0.02
 
 ## Training Dataset Parameters
 num_instances =5000              # number of training instances per epoch
@@ -248,10 +248,10 @@ f_handle = open(printout_dir, "w+")
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-mean_early = 0*2*tau_u + 2*tau_u
-std_early = int(4*tau_u/3)
-mean_late = 4*2*tau_u - 2*tau_u
-std_late = int(4*tau_u/3)
+mean_early = 0*2*tau_u + 2.5*tau_u
+std_early = int(3*tau_u/3)
+mean_late = 4*2*tau_u - 2.5*tau_u
+std_late = int(3*tau_u/3)
 
 initial_weight = [6] * num_neurons_perLayer[-2] * num_neurons_perLayer[-1] 
 weight_vector = \
@@ -788,6 +788,7 @@ for synapse_addr in WeightRAM.synapse_addr:
                 .format(synapse_addr, weight_vector[synapse_addr], WeightRAM.weight[synapse_addr]))
 f_handle.write("************************************************************\n")
 f_handle.close()
+print("Maximum successive correct count:{}\n".format(max_correct_cnt))
 print("End of Program!")
 #%% 
 if plot_response:

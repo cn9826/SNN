@@ -59,7 +59,7 @@ class SpikeIncache:
         self.mem =  [
                         {
                             "fired_synapse_addr"    :   None,
-                            "causal_tag"            :   0,
+                            "causal_tag"            :   None,
                             "weight"                :   None,
                             "time"                  :   None
                         } for entry in range(depth)
@@ -623,8 +623,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             return newWeight           
 
     def RSTDP_hidden(self, spike_in_time, spike_out_time, instance,
-                    oldWeight, causal_fan_in_addr, f_handle, 
-                    reward_signal, isf2f, isIntended,
+                    oldWeight, causal_fan_in_addr, causal_tag, f_handle, 
+                    reward_signal, isf2f, isIntended, 
                     successive_correct_cnt, coarse_fine_cut_off,
                     kernel_causal="exponential", kernel_anticausal="exponential",
                     A_coarse=2, A_fine=1,
@@ -633,6 +633,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     debug=0):
 
         # oldWeight and newWeight are lists of integers
+        # causal_tag is a list of "causal_tag" field of the SpikeIncache entry corresponding to oldWeight
         # causal_fan_in_addr is a list of fan-in synapse addresses corresponding to oldWeight
         # spike_in_time is a list of in-spike timings corresponding to causal_fan_in_addr
         # spike_out_time should be specified as an int
@@ -660,6 +661,21 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                             A * math.exp(-s/tau)
                 # if anti-causal
                 elif s < 0:
+                    deltaWeight = \
+                        -A * math.exp(s/tau)
+            return round(deltaWeight)
+        def computeCausalCutoff(t_out, t_in, causal_tag, A, tau=tau, default_deltaWeight=1):
+            if t_out == None:
+                if causal_tag == 1:
+                    deltaWeight = default_deltaWeight
+                elif causal_tag == 0:
+                    deltaWeight = -1*default_deltaWeight
+            else:
+                s = t_out - t_in
+                if causal_tag == 1:
+                    deltaWeight = \
+                        A * math.exp(-s/tau)
+                elif causal_tag == 0:
                     deltaWeight = \
                         -A * math.exp(s/tau)
             return round(deltaWeight)
@@ -692,8 +708,12 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         for i in range(len(oldWeight)):
             # F2F P+ and Non-F2F P- on the intended
             if isIntended:
-                deltaWeight = computeSTDPWindows(t_out=spike_out_time, 
+                # deltaWeight = computeSTDPWindows(t_out=spike_out_time, 
+                #                                     t_in=spike_in_time[i],
+                #                                     A=A)
+                deltaWeight = computeCausalCutoff(t_out=spike_out_time, 
                                                     t_in=spike_in_time[i],
+                                                    causal_tag=causal_tag[i],
                                                     A=A)
                 newWeight[i] = oldWeight[i] + deltaWeight
                 newWeight[i] = clip_newWeight(newWeight=newWeight[i], max_weight=max_weight, min_weight=min_weight)
@@ -707,8 +727,12 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
 
             # Non-F2F P+ and F2F P- on the non-intended
             elif not isIntended:
-                deltaWeight = computeSTDPWindows(t_out=spike_out_time, 
+                # deltaWeight = computeSTDPWindows(t_out=spike_out_time, 
+                #                                     t_in=spike_in_time[i],
+                #                                     A=A)
+                deltaWeight = computeCausalCutoff(t_out=spike_out_time, 
                                                     t_in=spike_in_time[i],
+                                                    causal_tag=causal_tag[i],
                                                     A=A)
                 deltaWeight = -1 * deltaWeight
                 newWeight[i] = oldWeight[i] + deltaWeight

@@ -245,7 +245,7 @@ duration = 100
 tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 vth_input = 1
-vth_hidden = 40     # with 2-spike consideration: (2-1) x 5 x tau_u
+vth_hidden = 40 + 20     # with 2-spike consideration: (2-1) x 5 x tau_u
 vth_output = 80 + 10     # with 3-spike consideration: (3-1) x 5 x tau_u 
 
 ## Supervised Training Parameters
@@ -256,7 +256,7 @@ stop_num = 50
 coarse_fine_ratio=0.2
 
 ## Training Dataset Parameters
-num_instances = 20              # number of training instances per epoch
+num_instances = 100             # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
@@ -505,34 +505,64 @@ sn_list = \
     ]
 for instance in range(num_instances):
     for i in neuron_indices:
-        sn = SNN.SpikingNeuron( layer_idx=ConnectivityTable.layer_num[i],
-                                neuron_idx=i, 
-                                fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
-                                fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
-                                spike_in_cache_depth = 4,
-                                num_in_spikes = 1,
-                                tau_u=tau_u,
-                                tau_v=tau_v,
-                                threshold=vth_input,
-                                duration=duration,
-                                max_num_fires=max_num_fires,
-                                training_on=0,
-                                supervised=0
-                                )
-        if sn.layer_idx == 1:
-            sn.threshold = vth_hidden
+        layer_idx = ConnectivityTable.layer_num[i]
+        if layer_idx == 0:        
+            sn = SNN.SpikingNeuron( layer_idx=layer_idx,
+                                    neuron_idx=i, 
+                                    fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
+                                    fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
+                                    spike_in_cache_depth = 1,
+                                    num_in_spikes = 1,
+                                    tau_u=tau_u,
+                                    tau_v=tau_v,
+                                    threshold=vth_input,
+                                    duration=duration,
+                                    max_num_fires=max_num_fires,
+                                    training_on=0,
+                                    supervised=0
+                                    )
+        if layer_idx == 1:
+            spike_in_cache_depth = 8
+            num_in_spikes = 2
             if supervised_hidden:
-                sn.num_in_spikes = 2
-                sn.training_on = 1
-                sn.supervised = 1
+                training_on = 1
+                supervised = 1
+            sn = SNN.SpikingNeuron( layer_idx=layer_idx,
+                                    neuron_idx=i, 
+                                    fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
+                                    fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
+                                    spike_in_cache_depth = spike_in_cache_depth,
+                                    num_in_spikes = num_in_spikes,
+                                    tau_u=tau_u,
+                                    tau_v=tau_v,
+                                    threshold=vth_hidden,
+                                    duration=duration,
+                                    max_num_fires=max_num_fires,
+                                    training_on=training_on,
+                                    supervised=supervised
+                                    )
+
+        if layer_idx == 2:
+            spike_in_cache_depth = 8
+            num_in_spikes = 3
+            if supervised_hidden:
+                training_on = 1
+                supervised = 1
+            sn = SNN.SpikingNeuron( layer_idx=layer_idx,
+                                    neuron_idx=i, 
+                                    fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
+                                    fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
+                                    spike_in_cache_depth = spike_in_cache_depth,
+                                    num_in_spikes = num_in_spikes,
+                                    tau_u=tau_u,
+                                    tau_v=tau_v,
+                                    threshold=vth_output,
+                                    duration=duration,
+                                    max_num_fires=max_num_fires,
+                                    training_on=training_on,
+                                    supervised=supervised
+                                    )
         
-        if sn.layer_idx == num_layers - 1:
-            sn.threshold = vth_output
-            if supervised_output:
-                sn.num_in_spikes = 3
-                sn.training_on = 1
-                sn.supervised = 1
-    
         sn_list[instance].append(sn)
 
 #%% Inter-neuron data Initialization

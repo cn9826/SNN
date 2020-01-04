@@ -53,11 +53,13 @@ class SpikeIncache:
     def __init__(self, depth=8, num_in_spikes=2, ptr_offset = -4):
         self.depth = depth
         self.num_in_spikes = num_in_spikes
+        self.causal_spike_in_cnt = 0
         self.ptr_offset = ptr_offset
         self.write_ptr = 0
         self.mem =  [
                         {
                             "fired_synapse_addr"    :   None,
+                            "causal_tag"            :   0,
                             "weight"                :   None,
                             "time"                  :   None
                         } for entry in range(depth)
@@ -67,6 +69,10 @@ class SpikeIncache:
         self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
         self.mem[self.write_ptr]["time"] = time
         self.mem[self.write_ptr]["weight"] = weight
+        self.mem[self.write_ptr]["causal_tag"] = 0
+        if self.causal_spike_in_cnt < self.num_in_spikes:
+            self.causal_spike_in_cnt += 1
+            self.mem[self.write_ptr]["causal_tag"] = 1
         # then increment write_ptr
         if self.write_ptr == self.depth - 1:
             self.write_ptr = 0
@@ -127,7 +133,6 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                             num_in_spikes=num_in_spikes, 
                                             ptr_offset=-1*int(spike_in_cache_depth/2)
                                             )
-        self.spike_in_cnt = 0
         self.oldWeight = None               # the weight that are associated with the causal in-spike that causes the out-spike 
                                             # an int 
                                             
@@ -155,40 +160,32 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             matched_addr = WeightRAM_inst.synapse_addr.index(fan_in_addr[i])
             WeightRAM_inst.weight[matched_addr] = newWeight[i]
 
-    def findCausalSynapse(self, instance, f_handle, pre_th=4, stop_num=1, debug=1):
+    def findCausalSynapse(self, instance, f_handle, stop_num=1, debug=1):
         ## used on output layer neurons during hidden layer training to locate a causal fan-in synapse
-        # reverse-search cache mem to look for the first in-spike that was received pre_th before out-spike
+        # reverse-search cache mem to look for the first in-spike that was received 
         cache_idx = 0
         causal_fan_in_addr = self.spike_in_cache.mem[cache_idx]["fired_synapse_addr"]
         found_cnt = 0
-        if self.fire_cnt != -1:
-            for i in range(self.spike_in_cache.depth-1, -1, -1):
-                if (self.spike_in_cache.mem[i]["time"] != None 
-                    and self.spike_out_info[0]["time"] - self.spike_in_cache.mem[i]["time"] >= pre_th):
-                    cache_idx = i
-                    causal_fan_in_addr = self.spike_in_cache.mem[cache_idx]["fired_synapse_addr"]
-                    found_cnt += 1
-                if found_cnt == stop_num:
-                    break
-            if found_cnt < stop_num:
-                print("Instance {}: Neuron {} has found {} SpikeInCache entries, less than specified {}"
-                    .format(instance, self.neuron_idx, found_cnt, stop_num)) 
-                print("Instance {}: Neuron {} returning Synapse {} as the causal fan-in"
-                    .format(instance, self.neuron_idx, causal_fan_in_addr))
-                if debug:
-                    f_handle.write("Instance {}: Neuron {} has found {} SpikeInCache entries, less than specified {}\n"
-                    .format(instance, self.neuron_idx, found_cnt, stop_num))
-                    f_handle.write("Instance {}: Returning Synapse {} as the causal fan-in\n"
-                    .format(instance, causal_fan_in_addr))
-        else:
-            print("Instance {}: Neuron {} has not fired and returned Synapse {} as the causal fan-in synapse!"
+        for i in range(self.spike_in_cache.depth-1, -1, -1):
+            if (self.spike_in_cache.mem[i]["time"] != None 
+                and self.spike_in_cache.mem[i]["causal_tag"] == 1):
+                cache_idx = i
+                causal_fan_in_addr = self.spike_in_cache.mem[cache_idx]["fired_synapse_addr"]
+                found_cnt += 1
+            if found_cnt == stop_num:
+                break
+        if found_cnt < stop_num:
+            print("Instance {}: Neuron {} has found {} SpikeInCache entries, less than specified {}"
+                .format(instance, self.neuron_idx, found_cnt, stop_num)) 
+            print("Instance {}: Neuron {} returning Synapse {} as the causal fan-in"
                 .format(instance, self.neuron_idx, causal_fan_in_addr))
             if debug:
-                f_handle.write("Instance {}: Neuron {} has not fired and returned Synapse {} as the causal fan-in synapse!\n"
-                    .format(instance, self.neuron_idx, causal_fan_in_addr))
+                f_handle.write("Instance {}: Neuron {} has found {} SpikeInCache entries, less than specified {}\n"
+                .format(instance, self.neuron_idx, found_cnt, stop_num))
+                f_handle.write("Instance {}: Returning Synapse {} as the causal fan-in\n"
+                .format(instance, causal_fan_in_addr))
         return causal_fan_in_addr
             
-
 
     def findPreSynapticNeuron(self, fan_in_synapse_addr, WeightRAM_inst):
         # fan_in_synapse_addr is an int
@@ -629,7 +626,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     oldWeight, causal_fan_in_addr, f_handle, 
                     reward_signal, isf2f, isIntended,
                     successive_correct_cnt, coarse_fine_cut_off,
-                    kernel_causal="shifted-exponential", kernel_anticausal="exponential",
+                    kernel_causal="exponential", kernel_anticausal="exponential",
                     A_coarse=2, A_fine=1,
                     tau=30, t_start=4, 
                     max_weight=7, min_weight=-8,
@@ -755,20 +752,11 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 self.relavent_fan_in_addr = relavent_fan_in_addr
                 self.last_spike_in_info = spike_in_info 
                 for i in range(len(relavent_fan_in_addr)):
-                    if self.spike_in_cnt < self.spike_in_cache.num_in_spikes:                    
-                        self.spike_in_cache.writeSpikeInInfo(
-                                            fired_synapse_addr=relavent_fan_in_addr[i],
-                                            time=sim_point,
-                                            weight = weight[i]   
-                                            )
-                        self.spike_in_cnt += 1
-                    else:
-                        print("Instance {}: Neuron {} has already received {} spikes; in-spike on Synapse {} is not written to cache at step {}!"
-                            .format(instance, self.neuron_idx, self.spike_in_cnt, relavent_fan_in_addr[i], sim_point))
-                        if debug_mode:
-                            f_handle.write("Instance {}: Neuron {} has already received {} spikes; in-spike on Synapse {} is not written to cache at step {}\n!"
-                                .format(instance, self.neuron_idx, self.spike_in_cnt, relavent_fan_in_addr[i], sim_point))
-
+                    self.spike_in_cache.writeSpikeInInfo(
+                                        fired_synapse_addr=relavent_fan_in_addr[i],
+                                        time=sim_point,
+                                        weight = weight[i]   
+                                        )
                 if self.fire_cnt == -1:
                 # only update causal_spike_in_info when the neuron has not fired
                     # choose the latest in-spike to be considered as the causal one

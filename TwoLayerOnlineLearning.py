@@ -217,19 +217,22 @@ def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_
 printout_dir = "sim_printouts/Contrived16Block2Layer/"
 
 ## Specify Global Connectivity Parmeters
-num_neurons_perLayer = [8, 8, 4]      # Assuming num_neurons_perLayer is the number of connections in FC case
+num_neurons_perLayer = [8, 12, 4]      # Assuming num_neurons_perLayer is the number of connections in FC case
 num_connect_perNeuron = [1,4,-1]    # -1 denotes FC       
+
+num_in_spikes_hidden = 2
+num_in_spikes_output = 4
 
 max_num_fires = 1
 
 fan_in_neuron = [
                     [], [], [], [], [], [], [], [],
-                    [0, 1, 4, 5], [0, 1, 4, 5], [0, 1, 4, 5], [0, 1, 4, 5], 
-                    [2, 3, 6, 7], [2, 3, 6, 7], [2, 3, 6, 7], [2, 3, 6, 7],
-                    [8, 9, 10, 11, 12, 13, 14, 15], 
-                    [8, 9, 10, 11, 12, 13, 14, 15], 
-                    [8, 9, 10, 11, 12, 13, 14, 15],
-                    [8, 9, 10, 11, 12, 13, 14, 15]
+                    [0, 1, 4, 5], [0, 1, 4, 5], [0, 1, 4, 5], [0, 1, 4, 5], [0, 1, 4, 5], [0, 1, 4, 5], 
+                    [2, 3, 6, 7], [2, 3, 6, 7], [2, 3, 6, 7], [2, 3, 6, 7], [2, 3, 6, 7], [2, 3, 6, 7],
+                    [x for x in range(8, 20)], 
+                    [x for x in range(8, 20)], 
+                    [x for x in range(8, 20)], 
+                    [x for x in range(8, 20)]
                 ]
 
 initial_weight_hidden = [5] * num_connect_perNeuron[1] * num_neurons_perLayer[1] 
@@ -249,8 +252,8 @@ vth_input = 1
 vth_hidden = 40 + 16     # with 2-spike consideration: [(2-1) x 5 x tau_u, 2 x 5 x tau_u)
                          # with 2-spike consideration: [(2-1) x 7 x tau_u, 2 x 7 x tau_u)
 
-vth_output = 80 + 22     # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)  
-                         # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)  
+vth_output = 150        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
+                         # with 3-spike consideration: [(4-1) x 7 x tau_u, 4 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
@@ -259,7 +262,7 @@ stop_num = 50
 coarse_fine_ratio=0.2
 
 ## Training Dataset Parameters
-num_instances = 3000             # number of training instances per epoch
+num_instances = 4000             # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
@@ -527,7 +530,7 @@ for instance in range(num_instances):
                                     )
         if layer_idx == 1:
             spike_in_cache_depth = 8
-            num_in_spikes = 2
+            num_in_spikes = num_in_spikes_hidden
             if supervised_hidden:
                 training_on = 1
                 supervised = 1
@@ -547,8 +550,8 @@ for instance in range(num_instances):
                                     )
 
         if layer_idx == 2:
-            spike_in_cache_depth = 8
-            num_in_spikes = 3
+            spike_in_cache_depth = 12
+            num_in_spikes = num_in_spikes_output
             if supervised_hidden:
                 training_on = 1
                 supervised = 1

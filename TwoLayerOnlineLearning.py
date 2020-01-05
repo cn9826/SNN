@@ -246,9 +246,11 @@ duration = 100
 tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 vth_input = 1
-vth_hidden = 40 + 20     # with 2-spike consideration: (2-1) x 5 x tau_u
-vth_output = 80 + 10     # with 3-spike consideration: (3-1) x 5 x tau_u 
+vth_hidden = 40 + 16     # with 2-spike consideration: [(2-1) x 5 x tau_u, 2 x 5 x tau_u)
+                         # with 2-spike consideration: [(2-1) x 7 x tau_u, 2 x 7 x tau_u)
 
+vth_output = 80 + 22     # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)  
+                         # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
@@ -262,7 +264,7 @@ num_instances = 3000             # number of training instances per epoch
 ## Simulation Settings
 debug_mode = 1
 plot_response = 0
-plot_InLatency = 0
+plot_InLatency = 1
 
 if supervised_hidden or supervised_output:
     printout_dir = printout_dir + "Supervised/dumpsim.txt"
@@ -746,3 +748,10 @@ print("Maximum successive correct count:{}\n".format(max_correct_cnt))
 print("End of Program!")
             
 
+#%% 
+if plot_response:
+    plotNeuronResponse_iterative(sn_list=sn_list, neuron_list=[8,9,10,11,12], instance_list = [0, instance])
+if plot_InLatency:
+    plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_bins=8)
+if plot_response or plot_InLatency:
+    plt.show()

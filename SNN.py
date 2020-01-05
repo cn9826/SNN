@@ -186,6 +186,10 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 .format(instance, self.neuron_idx, found_cnt, stop_num))
                 f_handle.write("Instance {}: Returning Synapse {} as the causal fan-in\n"
                 .format(instance, causal_fan_in_addr))
+        # if causal_fan_in_addr == None:
+        #     print("Instance {}: SpikeIncache entry of Neuron {} are:".format(instance, self.neuron_idx))
+        #     for i in range(self.spike_in_cache.depth):
+        #         print(self.spike_in_cache.mem[i])
         return (causal_fan_in_addr, spike_in_time, weight)
             
 
@@ -922,13 +926,13 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         sn_nonintended.updateWeight(fan_in_addr=[causal_fan_in_addr_nonintended], WeightRAM_inst=WeightRAM, newWeight=[newWeight])
             ## hidden layer training on the non-intended non-F2F neurons
                         if supervised_hidden:
-                            PresynapticIdx = \
+                            PreSynapticIdx = \
                                 sn_nonintended.findPreSynapticNeuron(
                                     fan_in_synapse_addr=causal_fan_in_addr_nonintended,
                                     WeightRAM_inst=WeightRAM
                                 )
-                            if PresynapticIdx != PreSynapticIdx_intended[instance]:
-                                sn_hidden = sn_list[instance][PreSynapticIdx_intended[instance]]
+                            if PreSynapticIdx != PreSynapticIdx_intended[instance]:
+                                sn_hidden = sn_list[instance][PreSynapticIdx]
                                 spike_out_time = sn_hidden.spike_out_info[0]["time"]
                                 spike_in_time = [mem["time"] for mem in sn_hidden.spike_in_cache.mem if mem["time"] != None]
                                 oldWeight = [mem["weight"] for mem in sn_hidden.spike_in_cache.mem if mem["weight"] != None]
@@ -1029,13 +1033,13 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 sn_nonintended.updateWeight(fan_in_addr=[causal_fan_in_addr_nonintended], WeightRAM_inst=WeightRAM, newWeight=[newWeight])
                 ## hidden alyer training on the non-intended F2F neuron
                 if supervised_hidden:
-                    PresynapticIdx = \
+                    PreSynapticIdx = \
                         sn_nonintended.findPreSynapticNeuron(
                             fan_in_synapse_addr=causal_fan_in_addr_nonintended,
                             WeightRAM_inst=WeightRAM
                         )
-                    if PresynapticIdx != PreSynapticIdx_intended[instance]:
-                        sn_hidden = sn_list[instance][PreSynapticIdx_intended[instance]]
+                    if PreSynapticIdx != PreSynapticIdx_intended[instance]:
+                        sn_hidden = sn_list[instance][PreSynapticIdx]
                         spike_out_time = sn_hidden.spike_out_info[0]["time"]
                         spike_in_time = [mem["time"] for mem in sn_hidden.spike_in_cache.mem if mem["time"] != None]
                         oldWeight = [mem["weight"] for mem in sn_hidden.spike_in_cache.mem if mem["weight"] != None]
@@ -1059,54 +1063,60 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
         correct_cnt = 0
         inference_correct[instance] = 0
 
-        ### Training on the intended neuron
-        ## output layer training on the intended output neuron
-        if supervised_output:
-            # apply non-F2F P- on the intended non-F2F output neuron
-            reward_signal = 0
-            isf2f = 0
-            isIntended = 1
-            sn_intended = sn_list[instance][desired_ff_idx]
-            causal_fan_in_addr_intended, _, oldWeight = \
-                sn_intended.findCausalSynapse(instance=instance, f_handle=f_handle)
-            spike_out_time = None
-            newWeight = sn_intended.BRRC_training(
-                                    spike_ref_time=min_fire_time,
-                                    spike_out_time=spike_out_time,
-                                    instance=instance,
-                                    oldWeight=oldWeight,
-                                    causal_fan_in_addr=causal_fan_in_addr_intended,
-                                    f_handle=f_handle,
-                                    reward_signal=reward_signal,
-                                    isf2f=isf2f, isIntended=isIntended,
-                                    successive_correct_cnt=correct_cnt,
-                                    coarse_fine_cut_off=stop_num*coarse_fine_ratio,
-                                    debug=1
-                                    )
-            sn_intended.updateWeight(fan_in_addr=[causal_fan_in_addr_intended], WeightRAM_inst=WeightRAM, newWeight=[newWeight])            
-            ## hidden layer training on the intended non-F2F output neuron
-            if supervised_hidden:
-                PreSynapticIdx_intended[instance] = \
-                    sn_intended.findPreSynapticNeuron(
-                        fan_in_synapse_addr=causal_fan_in_addr_intended,
-                        WeightRAM_inst=WeightRAM
-                    )
-                sn_hidden = sn_list[instance][PreSynapticIdx_intended[instance]]
-                spike_out_time = sn_hidden.spike_out_info[0]["time"]
-                spike_in_time = [mem["time"] for mem in sn_hidden.spike_in_cache.mem if mem["time"] != None]
-                oldWeight = [mem["weight"] for mem in sn_hidden.spike_in_cache.mem if mem["weight"] != None]
-                causal_fan_in_addr = [mem["fired_synapse_addr"] for mem in sn_hidden.spike_in_cache.mem if mem["fired_synapse_addr"] != None]
-                causal_tag = [mem["causal_tag"] for mem in sn_hidden.spike_in_cache.mem if mem["causal_tag"] != None]                    
-                newWeight = sn_hidden.RSTDP_hidden(spike_in_time=spike_in_time, spike_out_time=spike_out_time,
-                                                instance=instance, oldWeight=oldWeight,
-                                                causal_fan_in_addr=causal_fan_in_addr, 
-                                                causal_tag=causal_tag,
-                                                f_handle=f_handle, 
-                                                reward_signal=reward_signal, isf2f=isf2f, isIntended=isIntended,
-                                                successive_correct_cnt=correct_cnt, 
-                                                coarse_fine_cut_off = stop_num*coarse_fine_ratio,
-                                                debug=1
-                                                )
-                sn_hidden.spike_in_cache.writeNewWeight(causal_fan_in_addr, newWeight)
-                sn_hidden.updateWeight(fan_in_addr=causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+        # ### Training on the intended neuron
+        # ## output layer training on the intended output neuron
+        # if supervised_output:
+        #     # apply non-F2F P- on the intended non-F2F output neuron
+        #     reward_signal = 0
+        #     isf2f = 0
+        #     isIntended = 1
+        #     sn_intended = sn_list[instance][desired_ff_idx]
+        #     causal_fan_in_addr_intended, _, oldWeight = \
+        #         sn_intended.findCausalSynapse(instance=instance, f_handle=f_handle)
+        #     spike_out_time = None
+        #     newWeight = sn_intended.BRRC_training(
+        #                             spike_ref_time=min_fire_time,
+        #                             spike_out_time=spike_out_time,
+        #                             instance=instance,
+        #                             oldWeight=oldWeight,
+        #                             causal_fan_in_addr=causal_fan_in_addr_intended,
+        #                             f_handle=f_handle,
+        #                             reward_signal=reward_signal,
+        #                             isf2f=isf2f, isIntended=isIntended,
+        #                             successive_correct_cnt=correct_cnt,
+        #                             coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+        #                             debug=1
+        #                             )
+        #     sn_intended.updateWeight(fan_in_addr=[causal_fan_in_addr_intended], WeightRAM_inst=WeightRAM, newWeight=[newWeight])            
+        #     ## hidden layer training on the intended non-F2F output neuron
+        #     if supervised_hidden:
+        #         PreSynapticIdx_intended[instance] = \
+        #             sn_intended.findPreSynapticNeuron(
+        #                 fan_in_synapse_addr=causal_fan_in_addr_intended,
+        #                 WeightRAM_inst=WeightRAM
+        #             )
+        #         sn_hidden = sn_list[instance][PreSynapticIdx_intended[instance]]
+        #         spike_out_time = sn_hidden.spike_out_info[0]["time"]
+        #         spike_in_time = [mem["time"] for mem in sn_hidden.spike_in_cache.mem if mem["time"] != None]
+        #         oldWeight = [mem["weight"] for mem in sn_hidden.spike_in_cache.mem if mem["weight"] != None]
+        #         causal_fan_in_addr = [mem["fired_synapse_addr"] for mem in sn_hidden.spike_in_cache.mem if mem["fired_synapse_addr"] != None]
+        #         causal_tag = [mem["causal_tag"] for mem in sn_hidden.spike_in_cache.mem if mem["causal_tag"] != None]                    
+        #         newWeight = sn_hidden.RSTDP_hidden(spike_in_time=spike_in_time, spike_out_time=spike_out_time,
+        #                                         instance=instance, oldWeight=oldWeight,
+        #                                         causal_fan_in_addr=causal_fan_in_addr, 
+        #                                         causal_tag=causal_tag,
+        #                                         f_handle=f_handle, 
+        #                                         reward_signal=reward_signal, isf2f=isf2f, isIntended=isIntended,
+        #                                         successive_correct_cnt=correct_cnt, 
+        #                                         coarse_fine_cut_off = stop_num*coarse_fine_ratio,
+        #                                         debug=1
+        #                                         )
+        #         sn_hidden.spike_in_cache.writeNewWeight(causal_fan_in_addr, newWeight)
+        #         sn_hidden.updateWeight(fan_in_addr=causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
+
+        f_handle.write("Instance {}: no output layer neuron has fired up until the end of forward pass\n"
+        .format(instance))
+        print("Instance {}: no output layer neuron has fired up until the end of forward pass!"
+        .format(instance))
+
     return correct_cnt

@@ -281,9 +281,9 @@ f_handle.write("supervised_output: {}\n".format(supervised_output))
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-mean_early = 0*2*tau_u + 2*tau_u
+mean_early = 0*2*tau_u + 2.5*tau_u
 std_early = int(4*tau_u/3)
-mean_late = 4*2*tau_u - 2*tau_u
+mean_late = 4*2*tau_u - 2.5*tau_u
 std_late = int(4*tau_u/3)
 
 

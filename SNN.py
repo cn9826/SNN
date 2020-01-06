@@ -5,8 +5,12 @@ import math
 def list_intersection(lst1, lst2):
     if (isinstance(lst1, type(None)) or isinstance(lst2, type(None))):
         return []
+    # else:
+    #     common_elements = list(set(lst1) & set(lst2))
+    #     if None in common_elements:
+    #         common_elements.remove(None)
     else:
-        common_elements = list(set(lst1) & set(lst2))
+        common_elements = [element_lst1 for element_lst1 in lst1 if element_lst1 in lst2]
         if None in common_elements:
             common_elements.remove(None)
         return(common_elements)
@@ -496,7 +500,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                 A_coarse=2, A_fine=1,
                                 tau=30, 
                                 t_start=4, t_end=200, A_coarse_rect=2, A_fine_rect=1,
-                                max_weight=7, min_weight=-8,
+                                max_weight=7, min_weight=0,
                                 debug=0): 
 
             # isf2f is to indicate whether the neuron being processed is a first-to-spike one

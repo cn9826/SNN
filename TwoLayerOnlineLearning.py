@@ -217,8 +217,8 @@ def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_
 printout_dir = "sim_printouts/Contrived16Block2Layer/"
 
 ## Specify Global Connectivity Parmeters
-num_neurons_perLayer = [8, 12, 4]      # Assuming num_neurons_perLayer is the number of connections in FC case
-num_connect_perNeuron = [1,4,-1]    # -1 denotes FC       
+num_neurons_perLayer = [8, 12, 4]       # Assuming num_neurons_perLayer is the number of connections in FC case
+num_connect_perNeuron = [1,4,-1]        # -1 denotes FC       
 
 num_in_spikes_hidden = 2
 num_in_spikes_output = 4
@@ -649,8 +649,7 @@ for instance in range(num_instances):
                                     debug_mode=debug_mode,
                                     instance=instance,
                                     f_handle=f_handle
-                                    )                               
-            
+                                    )                                            
             # upadate the current potential to PotentialRAM
             PotentialRAM.potential[instance][i] = sn_list[instance][i].v[sim_point]
             
@@ -753,7 +752,7 @@ print("End of Program!")
 
 #%% 
 if plot_response:
-    plotNeuronResponse_iterative(sn_list=sn_list, neuron_list=[8,9,10,11,12], instance_list = [0, instance])
+    plotNeuronResponse_iterative(sn_list=sn_list, neuron_list=[20,21,22,23], instance_list = [0,instance])
 if plot_InLatency:
     plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_bins=8)
 if plot_response or plot_InLatency:

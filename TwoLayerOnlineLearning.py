@@ -625,6 +625,7 @@ inference_correct =     [
 correct_cnt = 0
 max_correct_cnt = 0
 PreSynapticIdx_intended = [None] * num_instances
+PreSynapticIdx_nonintended = [None] * num_instances
 ## Loop instances
 for instance in range(num_instances):
     f_handle.write("---------------Instance {} {} -----------------\n".format(instance,stimulus_time_vector[instance]["in_pattern"]))
@@ -711,7 +712,9 @@ for instance in range(num_instances):
                     sn_list=sn_list, instance=instance, inference_correct=inference_correct,
                     num_fired_output=len(output_neuron_fire_info[instance]["neuron_idx"]),
                     supervised_hidden=supervised_hidden, supervised_output=supervised_output,
-                    f_handle=f_handle, PreSynapticIdx_intended=PreSynapticIdx_intended,
+                    f_handle=f_handle, 
+                    PreSynapticIdx_intended=PreSynapticIdx_intended,
+                    PreSynapticIdx_nonintended=PreSynapticIdx_nonintended,
                     desired_ff_idx=desired_ff_neuron[instance]["ff_neuron"],
                     min_fire_time = min_fire_time, 
                     f2f_neuron_lst=f2f_neuron_lst,

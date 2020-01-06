@@ -624,8 +624,22 @@ inference_correct =     [
 ######################################################################################
 correct_cnt = 0
 max_correct_cnt = 0
-PreSynapticIdx_intended = [None] * num_instances
-PreSynapticIdx_nonintended = [None] * num_instances
+PreSynapticIdx_intended = \
+    [
+        {
+            "causal"        :   None,
+            "anti-causal"   :   None
+        }
+    ]
+
+PreSynapticIdx_nonintended = \
+    [
+        {
+            "causal"        :   None,
+            "anti-causal"   :   None
+        }
+    ]
+    
 ## Loop instances
 for instance in range(num_instances):
     f_handle.write("---------------Instance {} {} -----------------\n".format(instance,stimulus_time_vector[instance]["in_pattern"]))

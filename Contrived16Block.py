@@ -368,10 +368,8 @@ neuron_indices = range(num_neurons)
 synapse_addr = range(num_synapses)
 
 ## Initialize Connectivity Table and its "fan_in_synapse_idx", "fan_out_synapse_idx" attributes 
-ConnectivityTable = SNN.ConnectivityInfo(num_neurons=num_neurons, 
-                                         max_num_connections=max(num_neurons_perLayer), 
-                                         max_num_fires=max_num_fires
-                                        )
+ConnectivityTable = SNN.ConnectivityInfo(num_neurons=num_neurons, max_num_connections=max(num_neurons_perLayer), max_num_fires=max_num_fires)
+
 last_layer_last_synapse = -1
 for layer in range (num_layers):
     for neuron in range(num_neurons_perLayer[layer]):
@@ -406,7 +404,7 @@ for i in synapse_addr:
 PotentialRAM = SNN.PotentialRAM(
                                 num_neurons=num_neurons, 
                                 max_num_connections=max(num_neurons_perLayer),
-                                num_instances=num_instances,
+                                num_instances=num_instances
                                )
 PotentialRAM.fan_out_synapse_addr = ConnectivityTable.fan_out_synapse_addr
 
@@ -594,35 +592,35 @@ for instance in range(num_instances):
                                                     debug=1
                                                     )
                         sn.updateWeight(fan_in_addr=sn.causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
-                    # apply Non-F2F P- upadate only on the desired neuron 
-                    if not desired_ff_neuron[instance]["ff_neuron"] in f2f_neuron_idx:
-                        isf2f = 0
-                        reward_signal = 0
-                        isIntended = 1
-                        intended_idx = desired_ff_neuron[instance]["ff_neuron"]
-                        sn_intended = sn_list[instance][intended_idx]
-                        # prepare information needed for weight update
-                        if sn_intended.fire_cnt != -1:
-                            sn_intended_out_time = sn_intended.spike_out_info[0]["time"]
-                        else:
-                            sn_intended_out_time = None
-                        (intended_updateAddr, intended_oldWeight, causal_in_time) = \
-                            sn_intended.spike_in_cache.getUpdateAddr(isf2f, reward_signal, isIntended)
-                        
-                        newWeight = sn_intended.BRRC_training(
-                                                    spike_ref_time=min_fire_time,
-                                                    spike_out_time=sn_intended_out_time,                      
-                                                    instance=instance,
-                                                    oldWeight=intended_oldWeight,
-                                                    causal_fan_in_addr=intended_updateAddr,
-                                                    f_handle=f_handle,
-                                                    reward_signal=reward_signal, 
-                                                    isf2f=isf2f, isIntended=isIntended,
-                                                    successive_correct_cnt=correct_cnt,
-                                                    coarse_fine_cut_off=stop_num*coarse_fine_ratio,
-                                                    debug=1
-                                                    )
-                        sn_intended.updateWeight(fan_in_addr=intended_updateAddr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
+                # apply Non-F2F P- upadate only on the desired neuron 
+                if not desired_ff_neuron[instance]["ff_neuron"] in f2f_neuron_idx:
+                    isf2f = 0
+                    reward_signal = 0
+                    isIntended = 1
+                    intended_idx = desired_ff_neuron[instance]["ff_neuron"]
+                    sn_intended = sn_list[instance][intended_idx]
+                    # prepare information needed for weight update
+                    if sn_intended.fire_cnt != -1:
+                        sn_intended_out_time = sn_intended.spike_out_info[0]["time"]
+                    else:
+                        sn_intended_out_time = None
+                    (intended_updateAddr, intended_oldWeight, causal_in_time) = \
+                        sn_intended.spike_in_cache.getUpdateAddr(isf2f, reward_signal, isIntended)
+                    
+                    newWeight = sn_intended.BRRC_training(
+                                                spike_ref_time=min_fire_time,
+                                                spike_out_time=sn_intended_out_time,                      
+                                                instance=instance,
+                                                oldWeight=intended_oldWeight,
+                                                causal_fan_in_addr=intended_updateAddr,
+                                                f_handle=f_handle,
+                                                reward_signal=reward_signal, 
+                                                isf2f=isf2f, isIntended=isIntended,
+                                                successive_correct_cnt=correct_cnt,
+                                                coarse_fine_cut_off=stop_num*coarse_fine_ratio,
+                                                debug=1
+                                                )
+                    sn_intended.updateWeight(fan_in_addr=intended_updateAddr, WeightRAM_inst=WeightRAM, newWeight=newWeight)                       
                         
         # only one output layer neuron fired at the min_fire_time             
         elif len(list_min_idx) == 1:

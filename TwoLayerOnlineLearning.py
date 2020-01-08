@@ -245,7 +245,7 @@ weight_vector = \
     ]
 
 ## Specify common Spiking Neuron Parameters
-duration = 100
+duration = 150
 tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 vth_input = 1

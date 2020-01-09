@@ -1049,9 +1049,9 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                     oldWeight_causal=oldWeight_causal,
                                     causal_fan_in_addr=causal_fan_in_addr,
                                     t_in_causal=t_in_causal,
-                                    oldWeight_anticausal=oldWeight_anticausal,
-                                    anticausal_fan_in_addr=anticausal_fan_in_addr,
-                                    t_in_anticausal=t_in_anticausal,
+                                    oldWeight_anticausal=None,
+                                    anticausal_fan_in_addr=None,
+                                    t_in_anticausal=None,
                                     f_handle=f_handle,
                                     reward_signal=reward_signal,
                                     isf2f=isf2f, isIntended=isIntended,
@@ -1060,8 +1060,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                     debug=1
                                     )
         sn_nonintended.updateWeight(fan_in_addr=[causal_fan_in_addr], WeightRAM_inst=WeightRAM, newWeight=[newWeight_causal])            
-        if anticausal_fan_in_addr != None:
-            sn_nonintended.updateWeight(fan_in_addr=[anticausal_fan_in_addr], WeightRAM_inst=WeightRAM, newWeight=[newWeight_anticausal])            
+        # if anticausal_fan_in_addr != None:
+        #     sn_nonintended.updateWeight(fan_in_addr=[anticausal_fan_in_addr], WeightRAM_inst=WeightRAM, newWeight=[newWeight_anticausal])            
 
     if num_fired_output > 0:
         if desired_ff_idx == f2f_neuron_idx:

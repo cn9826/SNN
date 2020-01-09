@@ -257,7 +257,7 @@ vth_output = 150        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
-separation_window = 12
+separation_window = 10
 stop_num = 50
 coarse_fine_ratio=0.2
 
@@ -267,7 +267,7 @@ num_instances = 4000             # number of training instances per epoch
 ## Simulation Settings
 debug_mode = 1
 plot_response = 0
-plot_InLatency = 1
+plot_InLatency = 0
 
 if supervised_hidden or supervised_output:
     printout_dir = printout_dir + "Supervised/dumpsim.txt"
@@ -281,10 +281,10 @@ f_handle.write("supervised_output: {}\n".format(supervised_output))
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-mean_early = 0*2*tau_u + 2*tau_u
-std_early = int(4*tau_u/3)
-mean_late = 4*2*tau_u - 2*tau_u
-std_late = int(4*tau_u/3)
+mean_early = 0*2*tau_u + 2.5*tau_u
+std_early = int(5*tau_u/3)
+mean_late = 4*2*tau_u - 2.5*tau_u
+std_late = int(5*tau_u/3)
 
 
 input_patterns = ("O", "X", "UA", "DA")
@@ -551,7 +551,7 @@ for instance in range(num_instances):
 
         if layer_idx == 2:
             depth_causal = 4
-            depth_anticausal = 2
+            depth_anticausal = 4
             if supervised_hidden:
                 training_on = 1
                 supervised = 1

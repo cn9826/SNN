@@ -518,8 +518,8 @@ for instance in range(num_instances):
                                     neuron_idx=i, 
                                     fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
                                     fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
-                                    spike_in_cache_depth = 1,
-                                    num_in_spikes = 1,
+                                    depth_causal = 1,
+                                    depth_anticausal = 0,
                                     tau_u=tau_u,
                                     tau_v=tau_v,
                                     threshold=vth_input,
@@ -529,8 +529,8 @@ for instance in range(num_instances):
                                     supervised=0
                                     )
         if layer_idx == 1:
-            spike_in_cache_depth = 8
-            num_in_spikes = num_in_spikes_hidden
+            depth_causal = 2
+            depth_anticausal = 2
             if supervised_hidden:
                 training_on = 1
                 supervised = 1
@@ -538,8 +538,8 @@ for instance in range(num_instances):
                                     neuron_idx=i, 
                                     fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
                                     fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
-                                    spike_in_cache_depth = spike_in_cache_depth,
-                                    num_in_spikes = num_in_spikes,
+                                    depth_causal = depth_causal,
+                                    depth_anticausal = depth_anticausal,
                                     tau_u=tau_u,
                                     tau_v=tau_v,
                                     threshold=vth_hidden,
@@ -550,8 +550,8 @@ for instance in range(num_instances):
                                     )
 
         if layer_idx == 2:
-            spike_in_cache_depth = 12
-            num_in_spikes = num_in_spikes_output
+            depth_causal = 4
+            depth_anticausal = 2
             if supervised_hidden:
                 training_on = 1
                 supervised = 1
@@ -559,8 +559,8 @@ for instance in range(num_instances):
                                     neuron_idx=i, 
                                     fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
                                     fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
-                                    spike_in_cache_depth = spike_in_cache_depth,
-                                    num_in_spikes = num_in_spikes,
+                                    depth_causal = depth_causal,
+                                    depth_anticausal = depth_anticausal,
                                     tau_u=tau_u,
                                     tau_v=tau_v,
                                     threshold=vth_output,
@@ -752,6 +752,8 @@ for instance in range(num_instances):
         break
 f_handle.write("Maximum successive correct count:{}\n".format(max_correct_cnt))
 print("inference_correct list = \n{}\n".format(inference_correct))
+print("Supervised Training stops at Instance {}"
+        .format(instance))
 
 
 #%% Dump initial weight vector and final weightRAM

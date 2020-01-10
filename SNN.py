@@ -738,7 +738,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     oldWeight, fan_in_addr, synapse_causal_tag, neuron_causal_tag, f_handle, 
                     reward_signal, isf2f, isIntended, 
                     successive_correct_cnt, coarse_fine_cut_off,
-                    kernel="exponential",
+                    kernel="constant",
                     A_causal_coarse=2, A_causal_fine=1, tau_causal=30,  
                     A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=30,
                     A_const_coarse=2, A_const_fine=1,
@@ -964,7 +964,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
     def intendedUpdateRoutine(sn_intended, supervised_hidden, reward_signal, isIntended, isf2f, 
                                 instance, min_fire_time, f_handle,
                                 PreSynapticIdx_intended, WeightRAM,
-                                correct_cnt, stop_num, coarse_fine_ratio):
+                                correct_cnt, stop_num, coarse_fine_ratio, output_silent=0):
         if not isIntended:
             print("Error when calling intendedUpdateRoutine(): function argument isIntended is {}!".format(isIntended))
             exit(1)
@@ -975,6 +975,12 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             t_out = None
         else:
             t_out = sn_intended.spike_out_info[0]["time"]
+        
+        if output_silent:
+            anticausal_fan_in_addr = None
+            t_in_anticausal = None
+            oldWeight_anticausal = None
+
         newWeight_causal, newWeight_anticausal = \
             sn_intended.BRRC_output(
                                     t_out=t_out,
@@ -1153,7 +1159,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
                 instance=instance, min_fire_time=min_fire_time, f_handle=f_handle,
                 PreSynapticIdx_intended=PreSynapticIdx_intended, WeightRAM=WeightRAM,
-                correct_cnt=correct_cnt, stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio 
+                correct_cnt=correct_cnt, stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio,
+                output_silent=1 
             )              
 
         f_handle.write("Instance {}: no output layer neuron has fired up until the end of forward pass\n"

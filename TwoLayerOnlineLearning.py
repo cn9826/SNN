@@ -252,7 +252,7 @@ vth_input = 1
 vth_hidden = 40 + 16     # with 2-spike consideration: [(2-1) x 5 x tau_u, 2 x 5 x tau_u)
                          # with 2-spike consideration: [(2-1) x 7 x tau_u, 2 x 7 x tau_u)
 
-vth_output = 150        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
+vth_output = 200        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
                          # with 3-spike consideration: [(4-1) x 7 x tau_u, 4 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
@@ -282,9 +282,9 @@ f_handle.write("supervised_output: {}\n".format(supervised_output))
 ######################################################################################
 ## Define Input & Output Patterns
 mean_early = 0*2*tau_u + 2.5*tau_u
-std_early = int(5*tau_u/3)
+std_early = int(4*tau_u/3)
 mean_late = 4*2*tau_u - 2.5*tau_u
-std_late = int(5*tau_u/3)
+std_late = int(4*tau_u/3)
 
 
 input_patterns = ("O", "X", "UA", "DA")
@@ -550,8 +550,8 @@ for instance in range(num_instances):
                                     )
 
         if layer_idx == 2:
-            depth_causal = 4
-            depth_anticausal = 4
+            depth_causal = 5
+            depth_anticausal = 5
             if supervised_hidden:
                 training_on = 1
                 supervised = 1

@@ -118,7 +118,7 @@ def BimodalLatency(latency_mode, mean_early, std_early, mean_late, std_late, low
 def getInLatencies(in_pattern, num_in_neurons, early_latency_list, late_latency_list,
                     mean_early, std_early, mean_late, std_late, low_lim=0, high_lim=64):
 
-    in_pattern_list = ["O", "X", "<<", "//", ">>", "UA", "DA", "BS", "Bad//"]
+    in_pattern_list = ["O", "X", "<<", "//", ">>", "UA", "DA", r"\\", "Bad//", r"Bad\\"]
     if not in_pattern in in_pattern_list:
         print("Error when calling getInLatencies: illegal specification of \"in_pattern\"")
         exit(1)
@@ -179,18 +179,27 @@ def getInLatencies(in_pattern, num_in_neurons, early_latency_list, late_latency_
             InLatencies[i] = latency_early
             early_latency_list.append(latency_early)
 
-    elif in_pattern == "BS":
+    elif in_pattern == r"\\":
         for i in [4, 5, 6, 7]:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[i] = latency_early
             early_latency_list.append(latency_early)
+    
     elif in_pattern == "Bad//":
-        for i in [0, 1, 2, 6]:
+        for i in [0, 1, 2, 7]:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[i] = latency_early
             early_latency_list.append(latency_early)
+
+    elif in_pattern == r"Bad\\":
+        for i in [4, 5, 6, 3]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[i] = latency_early
+            early_latency_list.append(latency_early)
+
 
     return (InLatencies, early_latency_list, late_latency_list)
 
@@ -214,10 +223,10 @@ def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_
 
 #%% Parameters to tune
 ######################################################################################
-printout_dir = "sim_printouts/Contrived16Block2Layer/"
+printout_dir = "sim_printouts/Contrived16Blocks2Layer10Classes/"
 
 ## Specify Global Connectivity Parmeters
-num_neurons_perLayer = [8, 12, 4]       # Assuming num_neurons_perLayer is the number of connections in FC case
+num_neurons_perLayer = [8, 30, 10]       # Assuming num_neurons_perLayer is the number of connections in FC case
 num_connect_perNeuron = [1,4,-1]        # -1 denotes FC       
 
 num_in_spikes_hidden = 2
@@ -227,12 +236,9 @@ max_num_fires = 1
 
 fan_in_neuron = [
                     [], [], [], [], [], [], [], [],
-                    [0, 1, 4, 5], [0, 1, 4, 5], [0, 1, 4, 5], [0, 1, 4, 5], [0, 1, 4, 5], [0, 1, 4, 5], 
-                    [2, 3, 6, 7], [2, 3, 6, 7], [2, 3, 6, 7], [2, 3, 6, 7], [2, 3, 6, 7], [2, 3, 6, 7],
-                    [x for x in range(8, 20)], 
-                    [x for x in range(8, 20)], 
-                    [x for x in range(8, 20)], 
-                    [x for x in range(8, 20)]
+                    *[[0, 1, 4, 5]] * int(num_neurons_perLayer[1]/2),
+                    *[[2, 3, 6, 7]] * int(num_neurons_perLayer[1]/2),
+                    *[[x for x in range(8, 38)]] * num_neurons_perLayer[2]  
                 ]
 
 initial_weight_hidden = [5] * num_connect_perNeuron[1] * num_neurons_perLayer[1] 
@@ -258,16 +264,16 @@ vth_output = 200        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
 separation_window = 10
-stop_num = 50
-coarse_fine_ratio=0.2
+stop_num = 100
+coarse_fine_ratio=0.05
 
 ## Training Dataset Parameters
-num_instances = 4000             # number of training instances per epoch
+num_instances = 6000             # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
 plot_response = 0
-plot_InLatency = 0
+plot_InLatency = 1
 
 if supervised_hidden or supervised_output:
     printout_dir = printout_dir + "Supervised/dumpsim.txt"
@@ -281,20 +287,26 @@ f_handle.write("supervised_output: {}\n".format(supervised_output))
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-mean_early = 0*2*tau_u + 2.5*tau_u
-std_early = int(4*tau_u/3)
-mean_late = 4*2*tau_u - 2.5*tau_u
-std_late = int(4*tau_u/3)
+mean_early = 0*2*tau_u + 2*tau_u
+std_early = int(2*tau_u/3)
+mean_late = 4*2*tau_u - 2*tau_u
+std_late = int(2*tau_u/3)
 
 
-input_patterns = ("O", "X", "UA", "DA")
+input_patterns = ("O", "X", "UA", "DA", "<<", "//", ">>", r"\\", "Bad//", r"Bad\\")
 
 output_pattern = \
     {
         "O"      :   sum(num_neurons_perLayer[0:-1]),
         "X"      :   sum(num_neurons_perLayer[0:-1]) + 1,
         "UA"     :   sum(num_neurons_perLayer[0:-1]) + 2,
-        "DA"     :   sum(num_neurons_perLayer[0:-1]) + 3
+        "DA"     :   sum(num_neurons_perLayer[0:-1]) + 3,
+        "<<"     :   sum(num_neurons_perLayer[0:-1]) + 4,
+        "//"     :   sum(num_neurons_perLayer[0:-1]) + 5,
+        ">>"     :   sum(num_neurons_perLayer[0:-1]) + 6,
+        r"\\"    :   sum(num_neurons_perLayer[0:-1]) + 7,
+        "Bad//"  :   sum(num_neurons_perLayer[0:-1]) + 8,
+        r"Bad\\" :   sum(num_neurons_perLayer[0:-1]) + 9
     }
 
 ## Create stimulus spikes at the inuput layer (layer 0)
@@ -551,7 +563,7 @@ for instance in range(num_instances):
 
         if layer_idx == 2:
             depth_causal = 5
-            depth_anticausal = 5
+            depth_anticausal = 22
             if supervised_hidden:
                 training_on = 1
                 supervised = 1

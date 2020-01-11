@@ -223,10 +223,10 @@ def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_
 
 #%% Parameters to tune
 ######################################################################################
-printout_dir = "sim_printouts/Contrived16Blocks2Layer4Classes2/"
+printout_dir = "sim_printouts/Contrived16Blocks2Layer10Classes/"
 
 ## Specify Global Connectivity Parmeters
-num_neurons_perLayer = [8, 12, 4]       # Assuming num_neurons_perLayer is the number of connections in FC case
+num_neurons_perLayer = [8, 30, 10]       # Assuming num_neurons_perLayer is the number of connections in FC case
 num_connect_perNeuron = [1,4,-1]        # -1 denotes FC       
 
 max_num_fires = 1
@@ -235,7 +235,7 @@ fan_in_neuron = [
                     [], [], [], [], [], [], [], [],
                     *[[0, 1, 4, 5]] * int(num_neurons_perLayer[1]/2),
                     *[[2, 3, 6, 7]] * int(num_neurons_perLayer[1]/2),
-                    *[[x for x in range(8, 20)]] * num_neurons_perLayer[2]  
+                    *[[x for x in range(8, 38)]] * num_neurons_perLayer[2]  
                 ]
 
 initial_weight_hidden = [5] * num_connect_perNeuron[1] * num_neurons_perLayer[1] 
@@ -261,8 +261,8 @@ vth_output = 200        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
 separation_window = 10
-stop_num = 50
-coarse_fine_ratio=0.2
+stop_num = 200
+coarse_fine_ratio=0.025
 
 ## Training Dataset Parameters
 num_instances = 4000             # number of training instances per epoch
@@ -284,13 +284,13 @@ f_handle.write("supervised_output: {}\n".format(supervised_output))
 #%% Generate Input & Output Patterns also checking dimensions
 ######################################################################################
 ## Define Input & Output Patterns
-mean_early = 0*2*tau_u + 2.5*tau_u
-std_early = int(5*tau_u/3)
-mean_late = 4*2*tau_u - 2.5*tau_u
-std_late = int(5*tau_u/3)
+mean_early = 0*2*tau_u + 2*tau_u
+std_early = int(2*tau_u/3)
+mean_late = 4*2*tau_u - 2*tau_u
+std_late = int(2*tau_u/3)
 
 
-input_patterns = ("O", "X", "UA", "DA")
+input_patterns = ("O", "X", "UA", "DA", "<<", "//", ">>", r"\\", "Bad//", r"Bad\\")
 
 output_pattern = \
     {
@@ -560,7 +560,7 @@ for instance in range(num_instances):
 
         if layer_idx == 2:
             depth_causal = 5
-            depth_anticausal = 7
+            depth_anticausal = 25
             if supervised_hidden:
                 training_on = 1
                 supervised = 1

@@ -215,11 +215,63 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         return (causal_fan_in_addr, t_in_causal, weight_causal,
                 anticausal_fan_in_addr, t_in_anticausal, weight_anticausal)        
 
-    
-    
+    def findSynapseGroup(self, instance, f_handle, causal_start, num_causal, anticausal_start, num_anticausal, debug=1):
+        ## used on output layer neurons to find causal and anti-causal in-spike events based on which to update its
+        ## synaptic weights and trace presynaptic hidden neurons
+        
+        ## causal_start is an integer specifying start searching for causal in-spike events from the nth last causal in-spike 
+        ## causal_start = 1 means the last causal in-spike event is the beginning of search
+        ## anticausal_start is an integer specifying start searching for anticausal in-spike events from the nth anticausal in-spike 
+        ## anticausal_start = 1 means the 1st anticausal in-spike event is the beginning of search
+
+
+        ## look for causal in-spike events
+        found_cnt_causal = 0
+        in_spike_events_causal = []
+            
+        # look for causal in-spike events in descending mem idx starting from cache_idx_causal  
+        cache_idx_causal = self.spike_in_cache.depth_causal - 1 - (causal_start - 1)
+        for i in range(cache_idx_causal, -1, -1):
+            if (self.spike_in_cache.mem[i]["time"] != None
+                and self.spike_in_cache.mem[i]["causal_tag"] == 1):
+                in_spike_events_causal.append(self.spike_in_cache.mem[i])
+                found_cnt_causal += 1
+            if found_cnt_causal == num_causal:
+                break
+        
+        if found_cnt_causal < num_causal:
+            print("Instance {}: Neuron {} has found {} causal SpikeInCache entries, less than specified {}"
+                .format(instance, self.neuron_idx, found_cnt_causal, num_causal)) 
+            if debug:
+                f_handle.write("Instance {}: Neuron {} has found {} causal SpikeInCache entries, less than specified {}\n"
+                .format(instance, self.neuron_idx, found_cnt_causal, num_causal))
+
+        ## look for anti-causal in-spike events
+        found_cnt_anticausal = 0
+        in_spike_events_anticausal = []
+            
+        # look for anticausal in-spike events in ascending mem idx starting from cache_idx_causal  
+        cache_idx_anticausal = self.spike_in_cache.depth_causal + (anticausal_start-1)
+        for i in range(cache_idx_anticausal, self.spike_in_cache.depth, 1):
+            if (self.spike_in_cache.mem[i]["time"] != None
+                and self.spike_in_cache.mem[i]["causal_tag"] == 0):
+                in_spike_events_anticausal.append(self.spike_in_cache.mem[i])
+                found_cnt_anticausal += 1
+            if found_cnt_anticausal == num_anticausal:
+                break
+        if found_cnt_anticausal < num_anticausal:
+            print("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries, less than specified {}"
+                .format(instance, self.neuron_idx, found_cnt_anticausal, num_anticausal)) 
+            if debug:
+                f_handle.write("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries, less than specified {}\n"
+                .format(instance, self.neuron_idx, found_cnt_anticausal, num_anticausal))
+        
+        return (in_spike_events_causal, in_spike_events_anticausal)
+
+
     def findPreSynapticNeuron(self, fan_in_synapse_addr, WeightRAM_inst):
         # fan_in_synapse_addr is an int
-        return WeightRAM_inst.pre_neuron_idx[fan_in_synapse_addr]
+        return [WeightRAM_inst.pre_neuron_idx[addr] for addr in fan_in_synapse_addr]
 
 
     # right now ReSuMe_training is only handling one desired out-spike time per output neuron 
@@ -622,6 +674,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=30,
                     max_weight=7, min_weight=0, deltaWeight_default=2,
                     debug=0): 
+        
         if successive_correct_cnt >= coarse_fine_cut_off:   # determine A
             A_causal = A_causal_fine
             A_anticausal = A_anticausal_fine
@@ -632,56 +685,64 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             A_causal = A_causal_coarse
             A_anticausal = A_anticausal_coarse
 
-        newWeight_causal = oldWeight_causal
-        newWeight_anticausal = oldWeight_anticausal
+        newWeight_causal = oldWeight_causal[:]
+        if anticausal_fan_in_addr != None:
+            newWeight_anticausal = oldWeight_anticausal[:]
+        else:
+            newWeight_anticausal = None
 
         if isIntended:
             # F2F P+ on the intended, t_ref = t_in
             if reward_signal and isf2f:
-                s_causal = t_out - t_in_causal
-                deltaWeight_causal = \
-                    round(A_causal * math.exp(-(s_causal/tau_causal)))
-                newWeight_causal = oldWeight_causal + deltaWeight_causal
-                newWeight_causal = clip_newWeight(newWeight_causal, max_weight, min_weight)                
-
-                # only if anticausal_fan_in_addr can be found will the synaptic weight be updated
-                if anticausal_fan_in_addr != None:                
-                    s_anticausal = t_out - t_in_anticausal
-                    deltaWeight_anticausal = \
-                        round(-A_anticausal * math.exp(s_anticausal/tau_anticausal))
-                    newWeight_anticausal = oldWeight_anticausal + deltaWeight_anticausal
-                    newWeight_anticausal = clip_newWeight(newWeight_anticausal, max_weight, min_weight)
+                for i in range(len(oldWeight_causal)):
+                    s_causal = t_out - t_in_causal[i]
+                    deltaWeight_causal = \
+                        round(A_causal * math.exp(-(s_causal/tau_causal)))
+                    newWeight_causal[i] = oldWeight_causal[i] + deltaWeight_causal
+                    newWeight_causal[i] = clip_newWeight(newWeight_causal[i], max_weight, min_weight)                
+                    if debug:
+                        f_handle.write("Instance {}: Causal      F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight_causal[i], newWeight_causal[i], causal_fan_in_addr[i], self.neuron_idx, t_out))                           
                 
-                if debug:
-                    f_handle.write("Instance {}: Causal      F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                    .format(instance, oldWeight_causal, newWeight_causal, causal_fan_in_addr, self.neuron_idx, t_out))                           
-                    f_handle.write("Instance {}: anti-Causal F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                    .format(instance, oldWeight_anticausal, newWeight_anticausal, anticausal_fan_in_addr, self.neuron_idx, t_out))                           
-            
+                if anticausal_fan_in_addr != None:    
+                    for i in range(len(oldWeight_anticausal)):
+                        s_anticausal = t_out - t_in_anticausal[i]
+                        deltaWeight_anticausal = \
+                            round(-A_anticausal * math.exp(s_anticausal/tau_anticausal))
+                        newWeight_anticausal[i] = oldWeight_anticausal[i] + deltaWeight_anticausal
+                        newWeight_anticausal[i] = clip_newWeight(newWeight_anticausal[i], max_weight, min_weight)
+                        if debug:
+                            f_handle.write("Instance {}: anti-Causal F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight_anticausal[i], newWeight_anticausal[i], anticausal_fan_in_addr[i], self.neuron_idx, t_out))                                           
+                
             # non-F2F P- on the intended, t_ref = t_min
             elif not reward_signal and not isf2f:
                 if t_out != None:
                     s = t_out - t_min
                     deltaWeight_causal = \
                         round(A_causal * math.exp(-(s/tau_causal)))
-                    deltaWeight_anticausal = \
-                        round(-A_anticausal* math.exp(s/tau_anticausal))
+                    if anticausal_fan_in_addr != None:                    
+                        deltaWeight_anticausal = \
+                            round(-A_anticausal* math.exp(s/tau_anticausal))
                 else:
                     deltaWeight_causal = deltaWeight_default
-                    deltaWeight_anticausal = -deltaWeight_default
+                    if anticausal_fan_in_addr != None:
+                        deltaWeight_anticausal = -deltaWeight_default
 
-                newWeight_causal = oldWeight_causal + deltaWeight_causal
-                newWeight_causal = clip_newWeight(newWeight_causal, max_weight, min_weight)
-                # upadate anticausal synaptic weight on the intended output neuron 
-                # only if it can find an anti-causal synapse
-                if oldWeight_anticausal != None:
-                    newWeight_anticausal = oldWeight_anticausal + deltaWeight_anticausal
-                    newWeight_anticausal = clip_newWeight(newWeight_anticausal, max_weight, min_weight)
-                if debug:
-                    f_handle.write("Instance {}: Causal      non-F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                    .format(instance, oldWeight_causal, newWeight_causal, causal_fan_in_addr, self.neuron_idx, t_out))                           
-                    f_handle.write("Instance {}: anti-Causal non-F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                    .format(instance, oldWeight_anticausal, newWeight_anticausal, anticausal_fan_in_addr, self.neuron_idx, t_out))                           
+                for i in range(len(oldWeight_causal)):
+                    newWeight_causal[i] = oldWeight_causal[i] + deltaWeight_causal
+                    newWeight_causal[i] = clip_newWeight(newWeight_causal[i], max_weight, min_weight)                
+                    if debug:
+                        f_handle.write("Instance {}: Causal      non-F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight_causal[i], newWeight_causal[i], causal_fan_in_addr[i], self.neuron_idx, t_out))                           
+                
+                if anticausal_fan_in_addr != None: 
+                    for i in range(len(oldWeight_anticausal)):
+                        newWeight_anticausal[i] = oldWeight_anticausal[i] + deltaWeight_anticausal
+                        newWeight_anticausal[i] = clip_newWeight(newWeight_anticausal[i], max_weight, min_weight)
+                        if debug:
+                            f_handle.write("Instance {}: anti-Causal      non-F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight_anticausal[i], newWeight_anticausal[i], anticausal_fan_in_addr[i], self.neuron_idx, t_out))                           
 
         elif not isIntended:
             # non-F2F P+ on the non-intended, t_ref = t_min
@@ -693,45 +754,44 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     deltaWeight_anticausal = \
                         round(A_anticausal * math.exp(s/tau_anticausal))
 
-                newWeight_causal = oldWeight_causal + deltaWeight_causal
-                newWeight_causal = clip_newWeight(newWeight_causal, max_weight, min_weight)
-                
-                # upadate anticausal synaptic weight on the non-intended output neuron 
-                # only if it can find an anti-causal synapse
-                if oldWeight_anticausal != None:
-                    newWeight_anticausal = oldWeight_anticausal + deltaWeight_anticausal
-                    newWeight_anticausal = clip_newWeight(newWeight_anticausal, max_weight, min_weight)
+                for i in range(len(oldWeight_causal)):
+                    newWeight_causal[i] = oldWeight_causal[i] + deltaWeight_causal
+                    newWeight_causal[i] = clip_newWeight(newWeight_causal[i], max_weight, min_weight)                
+                    if debug:
+                        f_handle.write("Instance {}: Causal      non-F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight_causal[i], newWeight_causal[i], causal_fan_in_addr[i], self.neuron_idx, t_out))                           
 
-                if debug:
-                    f_handle.write("Instance {}: Causal      non-F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                    .format(instance, oldWeight_causal, newWeight_causal, causal_fan_in_addr, self.neuron_idx, t_out))                           
-                    if anticausal_fan_in_addr != None:                    
-                        f_handle.write("Instance {}: anti-Causal non-F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                        .format(instance, oldWeight_anticausal, newWeight_anticausal, anticausal_fan_in_addr, self.neuron_idx, t_out))                           
+                if anticausal_fan_in_addr != None: 
+                    for i in range(len(oldWeight_anticausal)):
+                        newWeight_anticausal[i] = oldWeight_anticausal[i] + deltaWeight_anticausal
+                        newWeight_anticausal[i] = clip_newWeight(newWeight_anticausal[i], max_weight, min_weight)
+                        if debug:
+                            f_handle.write("Instance {}: anti-Causal      non-F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight_anticausal[i], newWeight_anticausal[i], anticausal_fan_in_addr[i], self.neuron_idx, t_out))                           
             
             # F2F P- on the non-intended, t_ref = t_in
             elif not reward_signal and isf2f:
-                s_causal = t_out - t_in_causal
-                deltaWeight_causal = \
-                    round(-A_causal * math.exp(-(s_causal/tau_causal)))
-                newWeight_causal = oldWeight_causal + deltaWeight_causal
-                newWeight_causal = clip_newWeight(newWeight_causal, max_weight, min_weight)
+                for i in range(len(oldWeight_causal)):
+                    s_causal = t_out - t_in_causal[i]
+                    deltaWeight_causal = \
+                        round(-A_causal * math.exp(-(s_causal/tau_causal)))
+                    newWeight_causal[i] = oldWeight_causal[i] + deltaWeight_causal
+                    newWeight_causal[i] = clip_newWeight(newWeight_causal[i], max_weight, min_weight)                
+                    if debug:
+                        f_handle.write("Instance {}: Causal      F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight_causal[i], newWeight_causal[i], causal_fan_in_addr[i], self.neuron_idx, t_out))                           
                 
                 # only if anticausal_fan_in_addr can be found will the synaptic weight be updated                
                 if anticausal_fan_in_addr != None:
-                    s_anticausal = t_out - t_in_anticausal
-                    deltaWeight_anticausal = \
-                        round(A_anticausal * math.exp(s_anticausal/tau_anticausal))
-                    newWeight_anticausal = oldWeight_anticausal + deltaWeight_anticausal
-                    newWeight_anticausal = clip_newWeight(newWeight_anticausal, max_weight, min_weight)
-                
-                if debug:
-                    f_handle.write("Instance {}: Causal      F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                    .format(instance, oldWeight_causal, newWeight_causal, causal_fan_in_addr, self.neuron_idx, t_out))                           
-                    if anticausal_fan_in_addr != None:                    
-                        f_handle.write("Instance {}: anti-Causal F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                        .format(instance, oldWeight_anticausal, newWeight_anticausal, anticausal_fan_in_addr, self.neuron_idx, t_out))                           
-            
+                    for i in range(len(oldWeight_anticausal)):
+                        s_anticausal = t_out - t_in_anticausal[i]
+                        deltaWeight_anticausal = \
+                            round(A_anticausal * math.exp(s_anticausal/tau_anticausal))
+                        newWeight_anticausal[i] = oldWeight_anticausal[i] + deltaWeight_anticausal
+                        newWeight_anticausal[i] = clip_newWeight(newWeight_anticausal[i], max_weight, min_weight)
+                        if debug:
+                            f_handle.write("Instance {}: anti-Causal F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight_anticausal[i], newWeight_anticausal[i], anticausal_fan_in_addr[i], self.neuron_idx, t_out))                           
         return (newWeight_causal, newWeight_anticausal)
 
     def RSTDP_hidden(self, spike_in_time, spike_out_time, instance,
@@ -936,7 +996,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         PreSynapticIdx_intended, PreSynapticIdx_nonintended,
                         desired_ff_idx, min_fire_time, 
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
-                        WeightRAM, stop_num, coarse_fine_ratio, correct_cnt
+                        WeightRAM, stop_num, coarse_fine_ratio, correct_cnt,
+                        causal_start=2, num_causal=3, anticausal_start=22, num_anticausal=3
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])
     # desired_ff_idx = desired_ff_neuron[instance]["ff_neuron"]
@@ -964,13 +1025,24 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
     def intendedUpdateRoutine(sn_intended, supervised_hidden, reward_signal, isIntended, isf2f, 
                                 instance, min_fire_time, f_handle,
                                 PreSynapticIdx_intended, WeightRAM,
-                                correct_cnt, stop_num, coarse_fine_ratio, output_silent=0):
+                                correct_cnt, stop_num, coarse_fine_ratio, output_silent=0,
+                                causal_start=causal_start, num_causal=num_causal, anticausal_start=anticausal_start, num_anticausal=num_anticausal
+                                ):
         if not isIntended:
             print("Error when calling intendedUpdateRoutine(): function argument isIntended is {}!".format(isIntended))
             exit(1)
-        causal_fan_in_addr, t_in_causal, oldWeight_causal, \
-        anticausal_fan_in_addr, t_in_anticausal, oldWeight_anticausal = \
-            sn_intended.findSynapse(instance=instance, f_handle=f_handle, stop_num_causal=1, stop_num_anticausal=1)
+
+        in_spike_events_causal, in_spike_events_anticausal = \
+            sn_intended.findSynapseGroup(instance=instance, f_handle=f_handle,
+                                         causal_start=causal_start, num_causal=num_causal,
+                                         anticausal_start=anticausal_start, num_anticausal=num_anticausal)
+        causal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_causal]
+        t_in_causal = [entry["time"] for entry in in_spike_events_causal]
+        oldWeight_causal = [entry["weight"] for entry in in_spike_events_causal]        
+        anticausal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_anticausal]
+        t_in_anticausal = [entry["time"] for entry in in_spike_events_anticausal]
+        oldWeight_anticausal = [entry["weight"] for entry in in_spike_events_anticausal]
+
         if sn_intended.fire_cnt == -1:
             t_out = None
         else:
@@ -999,54 +1071,59 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                     coarse_fine_cut_off=stop_num*coarse_fine_ratio,
                                     debug=1
                                     )
-        sn_intended.updateWeight(fan_in_addr=[causal_fan_in_addr], WeightRAM_inst=WeightRAM, newWeight=[newWeight_causal])
+        sn_intended.updateWeight(fan_in_addr= causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight_causal)
         if anticausal_fan_in_addr != None:
-            sn_intended.updateWeight(fan_in_addr=[anticausal_fan_in_addr], WeightRAM_inst=WeightRAM, newWeight=[newWeight_anticausal])
+            sn_intended.updateWeight(fan_in_addr=anticausal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight_anticausal)
                         
 
         # trace back ahead to the presynaptic hidden neuron from the intended output neuron
-        PreSynapticIdx_intended[instance]["causal"] = \
-            sn_intended.findPreSynapticNeuron(
-                fan_in_synapse_addr=causal_fan_in_addr,
-                WeightRAM_inst=WeightRAM
+        PreSynapticIdx_intended[instance]["causal"].extend(
+            sn_intended.findPreSynapticNeuron(causal_fan_in_addr, WeightRAM)
             )
-        sn_hidden_causal = sn_list[instance][PreSynapticIdx_intended[instance]["causal"]]
-        if supervised_hidden:
-            hiddenNeuronUpdateRoutine(sn_hidden=sn_hidden_causal, instance=instance, 
-                                    reward_signal=reward_signal, isf2f=isf2f, isIntended=isIntended,
-                                    neuron_causal_tag=1,
-                                    f_handle=f_handle, WeightRAM=WeightRAM,
-                                    correct_cnt=correct_cnt, stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio)
-        
-
-        # only if the output neuron can find an anticausal_fan_in_addr will the presynaptic neuron be traced
-        if anticausal_fan_in_addr != None:
-            PreSynapticIdx_intended[instance]["anti-causal"] = \
-                sn_intended.findPreSynapticNeuron(
-                    fan_in_synapse_addr=anticausal_fan_in_addr,
-                    WeightRAM_inst=WeightRAM
-                )
-            sn_hidden_anticausal = sn_list[instance][PreSynapticIdx_intended[instance]["anti-causal"]]
+        for i in range(len(PreSynapticIdx_intended[instance]["causal"])):
+            sn_hidden_causal = sn_list[instance][PreSynapticIdx_intended[instance]["causal"][i]]
             if supervised_hidden:
-                hiddenNeuronUpdateRoutine(sn_hidden=sn_hidden_anticausal, instance=instance, 
+                hiddenNeuronUpdateRoutine(sn_hidden=sn_hidden_causal, instance=instance, 
                                         reward_signal=reward_signal, isf2f=isf2f, isIntended=isIntended,
-                                        neuron_causal_tag=0,
+                                        neuron_causal_tag=1,
                                         f_handle=f_handle, WeightRAM=WeightRAM,
                                         correct_cnt=correct_cnt, stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio)
+        
+        # only if the output neuron can find an anticausal_fan_in_addr will the presynaptic neuron be traced
+        if anticausal_fan_in_addr != None:
+            PreSynapticIdx_intended[instance]["anti-causal"].extend(
+                sn_intended.findPreSynapticNeuron(anticausal_fan_in_addr, WeightRAM)
+                )
+            for i in range(len(PreSynapticIdx_intended[instance]["anti-causal"])):
+                sn_hidden_anticausal = sn_list[instance][PreSynapticIdx_intended[instance]["anti-causal"][i]]
+                if supervised_hidden:
+                    hiddenNeuronUpdateRoutine(sn_hidden=sn_hidden_anticausal, instance=instance, 
+                                            reward_signal=reward_signal, isf2f=isf2f, isIntended=isIntended,
+                                            neuron_causal_tag=0,
+                                            f_handle=f_handle, WeightRAM=WeightRAM,
+                                            correct_cnt=correct_cnt, stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio)
     
     def nonintendedUpdateRoutine(sn_nonintended, supervised_hidden, reward_signal, isIntended, isf2f, 
                                 instance, min_fire_time, f_handle,
                                 PreSynapticIdx_nonintended, WeightRAM,
-                                correct_cnt, stop_num, coarse_fine_ratio):
+                                correct_cnt, stop_num, coarse_fine_ratio,
+                                causal_start=causal_start, num_causal=num_causal, anticausal_start=anticausal_start, num_anticausal=num_anticausal):
         if isIntended:
             print("Error when calling nonintendedUpdateRoutine(): function argument isIntended is {}!".format(isIntended))
             exit(1)
 
         ## update the last causal synaptic weight
-        causal_fan_in_addr, t_in_causal, oldWeight_causal, \
-        anticausal_fan_in_addr, t_in_anticausal, oldWeight_anticausal = \
-            sn_nonintended.findSynapse(instance=instance, f_handle=f_handle, stop_num_causal=1, stop_num_anticausal=1)
+        
+        in_spike_events_causal, in_spike_events_anticausal = \
+            sn_nonintended.findSynapseGroup(instance=instance, f_handle=f_handle,
+                                         causal_start=causal_start, num_causal=num_causal,
+                                         anticausal_start=anticausal_start, num_anticausal=num_anticausal)
+        causal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_causal]
+        t_in_causal = [entry["time"] for entry in in_spike_events_causal]
+        oldWeight_causal = [entry["weight"] for entry in in_spike_events_causal]        
+
         t_out = sn_nonintended.spike_out_info[0]["time"]
+        
         newWeight_causal, newWeight_anticausal = \
             sn_nonintended.BRRC_output(
                                     t_out=t_out,
@@ -1065,7 +1142,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                     coarse_fine_cut_off=stop_num*coarse_fine_ratio,
                                     debug=1
                                     )
-        sn_nonintended.updateWeight(fan_in_addr=[causal_fan_in_addr], WeightRAM_inst=WeightRAM, newWeight=[newWeight_causal])            
+        sn_nonintended.updateWeight(fan_in_addr=causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight_causal)            
         # if anticausal_fan_in_addr != None:
         #     sn_nonintended.updateWeight(fan_in_addr=[anticausal_fan_in_addr], WeightRAM_inst=WeightRAM, newWeight=[newWeight_anticausal])            
 
@@ -1108,7 +1185,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                             reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
                             instance=instance, min_fire_time=min_fire_time, f_handle=f_handle,
                             PreSynapticIdx_nonintended=PreSynapticIdx_nonintended, WeightRAM=WeightRAM,
-                            correct_cnt=correct_cnt, stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio 
+                            correct_cnt=correct_cnt, stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio,
+                            causal_start=1, num_causal=1  
                         )              
                         
         elif desired_ff_idx != f2f_neuron_idx:

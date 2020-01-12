@@ -270,7 +270,7 @@ num_instances = 4000             # number of training instances per epoch
 ## Simulation Settings
 debug_mode = 1
 plot_response = 0
-plot_InLatency = 1
+plot_InLatency = 0
 
 if supervised_hidden or supervised_output:
     printout_dir = printout_dir + "Supervised/dumpsim.txt"

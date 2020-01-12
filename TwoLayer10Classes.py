@@ -270,7 +270,7 @@ num_instances = 4000             # number of training instances per epoch
 ## Simulation Settings
 debug_mode = 1
 plot_response = 0
-plot_InLatency = 1
+plot_InLatency = 0
 
 if supervised_hidden or supervised_output:
     printout_dir = printout_dir + "Supervised/dumpsim.txt"
@@ -285,9 +285,9 @@ f_handle.write("supervised_output: {}\n".format(supervised_output))
 ######################################################################################
 ## Define Input & Output Patterns
 mean_early = 0*2*tau_u + 2*tau_u
-std_early = int(2*tau_u/3)
+std_early = int(3*tau_u/3)
 mean_late = 4*2*tau_u - 2*tau_u
-std_late = int(2*tau_u/3)
+std_late = int(3*tau_u/3)
 
 
 input_patterns = ("O", "X", "UA", "DA", "<<", "//", ">>", r"\\", "Bad//", r"Bad\\")

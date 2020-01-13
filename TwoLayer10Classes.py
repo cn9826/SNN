@@ -226,7 +226,7 @@ def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_
 printout_dir = "sim_printouts/Contrived16Blocks2Layer10Classes/"
 
 ## Specify Global Connectivity Parmeters
-num_neurons_perLayer = [8, 30, 10]       # Assuming num_neurons_perLayer is the number of connections in FC case
+num_neurons_perLayer = [8, 16, 10]       # Assuming num_neurons_perLayer is the number of connections in FC case
 num_connect_perNeuron = [1,4,-1]        # -1 denotes FC       
 
 max_num_fires = 1
@@ -235,7 +235,7 @@ fan_in_neuron = [
                     [], [], [], [], [], [], [], [],
                     *[[0, 1, 4, 5]] * int(num_neurons_perLayer[1]/2),
                     *[[2, 3, 6, 7]] * int(num_neurons_perLayer[1]/2),
-                    *[[x for x in range(8, 38)]] * num_neurons_perLayer[2]  
+                    *[[x for x in range(8, 24)]] * num_neurons_perLayer[2]  
                 ]
 
 initial_weight_hidden = [5] * num_connect_perNeuron[1] * num_neurons_perLayer[1] 
@@ -248,14 +248,14 @@ weight_vector = \
     ]
 
 ## Specify common Spiking Neuron Parameters
-duration = 150
+duration = 80
 tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 vth_input = 1
 vth_hidden = 40 + 16     # with 2-spike consideration: [(2-1) x 5 x tau_u, 2 x 5 x tau_u)
                          # with 2-spike consideration: [(2-1) x 7 x tau_u, 2 x 7 x tau_u)
 
-vth_output = 200        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
+vth_output = 115        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
                          # with 3-spike consideration: [(4-1) x 7 x tau_u, 4 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
@@ -270,7 +270,7 @@ num_instances = 4000             # number of training instances per epoch
 ## Simulation Settings
 debug_mode = 1
 plot_response = 0
-plot_InLatency = 0
+plot_InLatency = 1
 
 if supervised_hidden or supervised_output:
     printout_dir = printout_dir + "Supervised/dumpsim.txt"
@@ -285,9 +285,9 @@ f_handle.write("supervised_output: {}\n".format(supervised_output))
 ######################################################################################
 ## Define Input & Output Patterns
 mean_early = 0*2*tau_u + 2*tau_u
-std_early = int(3*tau_u/3)
+std_early = int(2*tau_u/3)
 mean_late = 4*2*tau_u - 2*tau_u
-std_late = int(3*tau_u/3)
+std_late = int(2*tau_u/3)
 
 
 input_patterns = ("O", "X", "UA", "DA", "<<", "//", ">>", r"\\", "Bad//", r"Bad\\")
@@ -559,8 +559,8 @@ for instance in range(num_instances):
                                     )
 
         if layer_idx == 2:
-            depth_causal = 5
-            depth_anticausal = 25
+            depth_causal = 3
+            depth_anticausal = 5
             if supervised_hidden:
                 training_on = 1
                 supervised = 1

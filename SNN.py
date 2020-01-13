@@ -11,9 +11,17 @@ def list_intersection(lst1, lst2):
     #         common_elements.remove(None)
     else:
         common_elements = [element_lst1 for element_lst1 in lst1 if element_lst1 in lst2]
+        lst1_element_indices = [i for i in range(len(lst1)) if lst1[i] in lst2]
         if None in common_elements:
             common_elements.remove(None)
-        return(common_elements)
+        return(common_elements, lst1_element_indices)
+
+def flatten_list(lst):
+    flat_list = []
+    for sublist in lst:
+        for item in sublist:
+            flat_list.append(item)
+    return flat_list
 
 def clip_newWeight (newWeight, max_weight, min_weight):
     if newWeight > max_weight:
@@ -54,11 +62,10 @@ class PotentialRAM:  # indexed by neuron_idx
                                     ]
 
 class SpikeIncache:
-    def __init__(self, depth_causal=4, depth_anticausal=2):
+    def __init__(self, depth_causal=2, depth_anticausal=2):
         self.depth_causal = depth_causal
         self.depth_anticausal = depth_anticausal
         self.depth = depth_causal + depth_anticausal
-        self.causal_spike_in_cnt = 0
         self.write_ptr = 0
         self.mem =  [
                         {
@@ -69,17 +76,23 @@ class SpikeIncache:
                         } for entry in range(self.depth)
                     ]
     def writeSpikeInInfo(self, fired_synapse_addr, time, weight):
-        if self.write_ptr < self.depth:
+        if self.write_ptr < self.depth_causal:
             # write first 
             self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
             self.mem[self.write_ptr]["time"] = time
             self.mem[self.write_ptr]["weight"] = weight
-            self.mem[self.write_ptr]["causal_tag"] = 0
-            if self.causal_spike_in_cnt < self.depth_causal:
-                self.causal_spike_in_cnt += 1
-                self.mem[self.write_ptr]["causal_tag"] = 1
+            self.mem[self.write_ptr]["causal_tag"] = 1
             # then increment write_ptr
-            self.write_ptr += 1            
+            self.write_ptr += 1 
+        elif self.write_ptr >= self.depth_causal:
+            self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
+            self.mem[self.write_ptr]["time"] = time
+            self.mem[self.write_ptr]["weight"] = weight
+            self.mem[self.write_ptr]["causal_tag"] = 0
+            self.write_ptr += 1
+            # clip write_ptr to be between depth_causal and depth-1
+            if self.write_ptr == self.depth:
+                self.write_ptr = self.depth_causal                   
 
     def writeNewWeight(self, causal_fan_in_addr, newWeight):
         if len(causal_fan_in_addr) != len(newWeight):
@@ -100,7 +113,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
 
     # Later add num_connections, preNeuron_idx, synaptic_weights etc...
     def __init__(self, layer_idx, neuron_idx, fan_in_synapse_addr, fan_out_synapse_addr, tau_u, tau_v, 
-                threshold, duration, depth_causal, depth_anticausal, spike_out_time_d_list=[],
+                threshold, duration, depth_causal, depth_anticausal, spatial_idx, num_hidden_spatial_idx, 
+                spike_out_time_d_list=[],
                 max_num_fires=1, training_on=0, supervised=0):
         self.layer_idx = layer_idx
         self.neuron_idx = neuron_idx
@@ -108,6 +122,22 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         # synapse address and weight is key-value pair
         self.fan_out_synapse_addr = fan_out_synapse_addr
         self.fire_cnt = -1
+        # spatial index assigned to hidden layer neurons
+        if self.layer_idx == 1:
+            self.spatial_idx = spatial_idx
+        else:
+            self.spatial_idx = None
+        # a list of SpikeIncache objects will be instantiated for a output layer neuron,
+        # each SpikeIncache corresponding to one spatial index
+        if self.layer_idx != 2:        
+            self.spike_in_cache = SpikeIncache(depth_causal=depth_causal, depth_anticausal=depth_anticausal)
+        else:
+            self.num_hidden_spatial_idx = num_hidden_spatial_idx
+            self.spike_in_cache =\
+                 [
+                    SpikeIncache(depth_causal=depth_causal, depth_anticausal=depth_anticausal)
+                    for locs in range(num_hidden_spatial_idx)                     
+                 ]
         # simulation duration specified in a.u.
         self.duration = duration
         self.u = [0] * int(round(self.duration/SpikingNeuron.dt))
@@ -122,7 +152,6 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
 
         self.last_spike_in_info = []        # the last in-spike that contributed to the output spike
         self.causal_spike_in_info = []      # the causal in-spike info
-        self.spike_in_cache = SpikeIncache(depth_causal=depth_causal, depth_anticausal=depth_anticausal)
         self.oldWeight = None               # the weight that are associated with the causal in-spike that causes the out-spike 
                                             # an int 
                                             
@@ -224,48 +253,58 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         ## anticausal_start is an integer specifying start searching for anticausal in-spike events from the nth anticausal in-spike 
         ## anticausal_start = 1 means the 1st anticausal in-spike event is the beginning of search
 
-
+        if self.layer_idx != 2:
+            print("Error when calling findSynapseGroup(): Neuron {} is not in Layer 2!".format(self.neuron_idx))
+            exit(1)
+        
+        num_hidden_spatial_idx = self.num_hidden_spatial_idx
         ## look for causal in-spike events
-        found_cnt_causal = 0
-        in_spike_events_causal = []
+        found_cnt_causal = [0 for spatial_idx in range(num_hidden_spatial_idx)]
+        in_spike_events_causal = [[] for spatial_idx in range(num_hidden_spatial_idx)]
             
         # look for causal in-spike events in descending mem idx starting from cache_idx_causal  
-        cache_idx_causal = self.spike_in_cache.depth_causal - 1 - (causal_start - 1)
-        for i in range(cache_idx_causal, -1, -1):
-            if (self.spike_in_cache.mem[i]["time"] != None
-                and self.spike_in_cache.mem[i]["causal_tag"] == 1):
-                in_spike_events_causal.append(self.spike_in_cache.mem[i])
-                found_cnt_causal += 1
-            if found_cnt_causal == num_causal:
-                break
-        
-        if found_cnt_causal < num_causal:
-            print("Instance {}: Neuron {} has found {} causal SpikeInCache entries, less than specified {}"
-                .format(instance, self.neuron_idx, found_cnt_causal, num_causal)) 
-            if debug:
-                f_handle.write("Instance {}: Neuron {} has found {} causal SpikeInCache entries, less than specified {}\n"
-                .format(instance, self.neuron_idx, found_cnt_causal, num_causal))
+        for spatial_idx in range(num_hidden_spatial_idx):
+            cache_idx_causal = self.spike_in_cache[spatial_idx].depth_causal - 1 - (causal_start - 1)
+            for i in range(cache_idx_causal, -1, -1):
+                if (self.spike_in_cache[spatial_idx].mem[i]["time"] != None
+                    and self.spike_in_cache[spatial_idx].mem[i]["causal_tag"] == 1):
+                    in_spike_events_causal[spatial_idx].append(self.spike_in_cache[spatial_idx].mem[i])
+                    found_cnt_causal[spatial_idx] += 1
+                if found_cnt_causal[spatial_idx] == num_causal:
+                    break
+            
+            if found_cnt_causal[spatial_idx] < num_causal:
+                print("Instance {}: Neuron {} has found {} causal SpikeInCache entries in spatial location {}, less than specified {}"
+                    .format(instance, self.neuron_idx, found_cnt_causal[spatial_idx], spatial_idx, num_causal)) 
+                if debug:
+                    f_handle.write("Instance {}: Neuron {} has found {} causal SpikeInCache entries in spatial location {}, less than specified {}\n"
+                        .format(instance, self.neuron_idx, found_cnt_causal[spatial_idx], spatial_idx, num_causal)) 
 
         ## look for anti-causal in-spike events
-        found_cnt_anticausal = 0
-        in_spike_events_anticausal = []
+        found_cnt_anticausal = [0 for spatial_idx in range(num_hidden_spatial_idx)]
+        in_spike_events_anticausal = [[] for spatial_idx in range(num_hidden_spatial_idx)]
             
         # look for anticausal in-spike events in ascending mem idx starting from cache_idx_causal  
-        cache_idx_anticausal = self.spike_in_cache.depth_causal + (anticausal_start-1)
-        for i in range(cache_idx_anticausal, self.spike_in_cache.depth, 1):
-            if (self.spike_in_cache.mem[i]["time"] != None
-                and self.spike_in_cache.mem[i]["causal_tag"] == 0):
-                in_spike_events_anticausal.append(self.spike_in_cache.mem[i])
-                found_cnt_anticausal += 1
-            if found_cnt_anticausal == num_anticausal:
-                break
-        if found_cnt_anticausal < num_anticausal:
-            print("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries, less than specified {}"
-                .format(instance, self.neuron_idx, found_cnt_anticausal, num_anticausal)) 
-            if debug:
-                f_handle.write("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries, less than specified {}\n"
-                .format(instance, self.neuron_idx, found_cnt_anticausal, num_anticausal))
+        for spatial_idx in range(num_hidden_spatial_idx):
+            cache_idx_anticausal = self.spike_in_cache[spatial_idx].depth_causal + (anticausal_start-1)
+            for i in range(cache_idx_anticausal, self.spike_in_cache[spatial_idx].depth, 1):
+                if (self.spike_in_cache[spatial_idx].mem[i]["time"] != None
+                    and self.spike_in_cache[spatial_idx].mem[i]["causal_tag"] == 0):
+                    in_spike_events_anticausal[spatial_idx].append(self.spike_in_cache[spatial_idx].mem[i])
+                    found_cnt_anticausal[spatial_idx] += 1
+                if found_cnt_anticausal[spatial_idx] == num_anticausal:
+                    break
+            if found_cnt_anticausal[spatial_idx] < num_anticausal:
+                print("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries in spatial location {}, less than specified {}"
+                    .format(instance, self.neuron_idx, found_cnt_anticausal[spatial_idx], spatial_idx, num_anticausal)) 
+                if debug:
+                    f_handle.write("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries in spatial location {}, less than specified {}\n"
+                    .format(instance, self.neuron_idx, found_cnt_anticausal[spatial_idx], spatial_idx, num_anticausal))
         
+        # at the end, flatten the resulting lists along the spatial_idx dimension
+        in_spike_events_causal = flatten_list(in_spike_events_causal)
+        in_spike_events_anticausal = flatten_list(in_spike_events_anticausal)
+
         return (in_spike_events_causal, in_spike_events_anticausal)
 
 
@@ -923,6 +962,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         # spike_in_info is the data transmitted between neurons: (a dictionary)
         #   spike_in_info["fired_synapse_addr"] (a list of int)
         #   spike_in_info["time"] (an int)
+        #   spike_in_info["spatial_idx"] (a list of int), only hidden neuron fan-out has this attribute
         #   simpoint is in range(0,duration,dt)         
         
         dt = SpikingNeuron.dt
@@ -930,7 +970,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         # update synaptic current 
         # if sim_point == spike_in_info["time"] and fan-in matches, then process the spiking event
         if sim_point == spike_in_info["time"]:
-            relavent_fan_in_addr = \
+            relavent_fan_in_addr, spike_event_indices = \
                                 list_intersection(
                                                 spike_in_info["fired_synapse_addr"], 
                                                 self.fan_in_synapse_addr
@@ -946,20 +986,55 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 # and the associated weights for weight updates
                 self.relavent_fan_in_addr = relavent_fan_in_addr
                 self.last_spike_in_info = spike_in_info 
-                for i in range(len(relavent_fan_in_addr)):
-                    self.spike_in_cache.writeSpikeInInfo(
-                                        fired_synapse_addr=relavent_fan_in_addr[i],
-                                        time=sim_point,
-                                        weight = weight[i]   
-                                        )
+                
+                # if the neuron is not in the output layer, don't care about spatial_idx
+                if self.layer_idx != 2:
+                    self.u[sim_point] = (1 - dt/self.tau_u) * self.u[sim_point-1]
+                    for i in range(len(relavent_fan_in_addr)):
+                        self.spike_in_cache.writeSpikeInInfo(
+                                            fired_synapse_addr=relavent_fan_in_addr[i],
+                                            time=sim_point,
+                                            weight = weight[i]   
+                                            )
+                        # # in-spike events will only be considered if the anti-causal portion of the 
+                        # # SpikeIncache mem has not been filled yet
+                        # if (self.spike_in_cache.write_ptr <= self.spike_in_cache.depth_causal
+                        #     and self.spike_in_cache.mem[self.spike_in_cache.depth_causal]["time"] == None):
+                        self.u[sim_point] += weight[i] * dt
+
+                # if the neuron is in the output layer, need to write in-spike events in 
+                # SpikeIncache objects with corresponding spatial_idx
+                elif self.layer_idx == 2:
+                    self.u[sim_point] = (1 - dt/self.tau_u) * self.u[sim_point-1]
+                    for i in range(len(relavent_fan_in_addr)):
+                        hidden_spatial_idx = spike_in_info["spatial_idx"][spike_event_indices[i]]
+                        self.spike_in_cache[hidden_spatial_idx].writeSpikeInInfo(
+                            fired_synapse_addr=relavent_fan_in_addr[i],
+                            time=sim_point,
+                            weight=weight[i]
+                        )
+                        # # in-spike events will only be considered if the anti-causal portion of the 
+                        # # SpikeIncache mem has not been filled yet
+                        # if (self.spike_in_cache[hidden_spatial_idx].write_ptr <= self.spike_in_cache[hidden_spatial_idx].depth_causal
+                        #     and self.spike_in_cache[hidden_spatial_idx].mem[self.spike_in_cache[hidden_spatial_idx].depth_causal]["time"] == None):
+                        self.u[sim_point] += weight[i] * dt
+
                 if self.fire_cnt == -1:
                 # only update causal_spike_in_info when the neuron has not fired
                     # choose the latest in-spike to be considered as the causal one
                     self.oldWeight = weight[-1]
                     self.causal_spike_in_info = self.last_spike_in_info
                     self.causal_fan_in_addr = relavent_fan_in_addr[-1]
-                    
-                self.u[sim_point] = (1 - dt/self.tau_u) * self.u[sim_point-1] + sum(weight) * dt
+                
+                # # in-spike events will only be considered if the anti-causal portion of the 
+                # # SpikeIncache mem has not been filled yet
+                # if (self.spike_in_cache.write_ptr <= self.spike_in_cache.depth_causal 
+                #     and self.spike_in_cache.mem[self.spike_in_cache.depth_causal]["time"] == None):
+                #     self.u[sim_point] = (1 - dt/self.tau_u) * self.u[sim_point-1] + sum(weight) * dt
+                # else:
+                #     if (self.u[sim_point-1]!=0):
+                #         self.u[sim_point] = (1 - dt/self.tau_u) * self.u[sim_point-1] 
+            
             else:
                 if (self.u[sim_point-1] != 0):                          # added to take advantage of potential sparsity
                     self.u[sim_point] = (1 - dt/self.tau_u) * self.u[sim_point-1]
@@ -967,8 +1042,6 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         else:                                                       # if no spiking event, check sparsity 
             if (self.u[sim_point-1] != 0):                          # added to take advantage of potential sparsity
                 self.u[sim_point] = (1 - dt/self.tau_u) * self.u[sim_point-1]
-            else:
-                pass
 
         # update membrane potential
         # check if neuron has reached maximaly allowed fire number
@@ -997,7 +1070,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         desired_ff_idx, min_fire_time, 
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
                         WeightRAM, stop_num, coarse_fine_ratio, correct_cnt,
-                        causal_start=3, num_causal=2, anticausal_start=23, num_anticausal=3
+                        causal_start=1, num_causal=1, anticausal_start=1, num_anticausal=2
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])
     # desired_ff_idx = desired_ff_neuron[instance]["ff_neuron"]
@@ -1019,7 +1092,6 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                         coarse_fine_cut_off = stop_num*coarse_fine_ratio,
                                         debug=1
                                         )
-        sn_hidden.spike_in_cache.writeNewWeight(fan_in_addr, newWeight)
         sn_hidden.updateWeight(fan_in_addr=fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
 
     def intendedUpdateRoutine(sn_intended, supervised_hidden, reward_signal, isIntended, isf2f, 
@@ -1036,12 +1108,13 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             sn_intended.findSynapseGroup(instance=instance, f_handle=f_handle,
                                          causal_start=causal_start, num_causal=num_causal,
                                          anticausal_start=anticausal_start, num_anticausal=num_anticausal)
+        
         causal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_causal]
         t_in_causal = [entry["time"] for entry in in_spike_events_causal]
         oldWeight_causal = [entry["weight"] for entry in in_spike_events_causal]        
         anticausal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_anticausal]
         t_in_anticausal = [entry["time"] for entry in in_spike_events_anticausal]
-        oldWeight_anticausal = [entry["weight"] for entry in in_spike_events_anticausal]
+        oldWeight_anticausal = [entry["weight"] for entry in in_spike_events_anticausal]        
 
         if sn_intended.fire_cnt == -1:
             t_out = None

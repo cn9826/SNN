@@ -226,7 +226,7 @@ def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_
 printout_dir = "sim_printouts/Contrived16Blocks2Layer10Classes/"
 
 ## Specify Global Connectivity Parmeters
-num_neurons_perLayer = [8, 30, 10]       # Assuming num_neurons_perLayer is the number of connections in FC case
+num_neurons_perLayer = [8, 24, 10]       # Assuming num_neurons_perLayer is the number of connections in FC case
 num_connect_perNeuron = [1,4,-1]        # -1 denotes FC       
 
 max_num_fires = 1
@@ -235,8 +235,24 @@ fan_in_neuron = [
                     [], [], [], [], [], [], [], [],
                     *[[0, 1, 4, 5]] * int(num_neurons_perLayer[1]/2),
                     *[[2, 3, 6, 7]] * int(num_neurons_perLayer[1]/2),
-                    *[[x for x in range(8, 38)]] * num_neurons_perLayer[2]  
+                    *[[x for x in range(8, 32)]] * num_neurons_perLayer[2]  
                 ]
+
+num_hidden_spatial_idx = 2
+spatial_idx_dict = \
+    {
+        0   :   [
+                    neuron_idx 
+                    for neuron_idx in range(num_neurons_perLayer[0],
+                                            num_neurons_perLayer[0] + int(num_neurons_perLayer[1]/num_hidden_spatial_idx))
+                ],
+        
+        1   :   [
+                    neuron_idx 
+                    for neuron_idx in range(num_neurons_perLayer[0] + int(num_neurons_perLayer[1]/num_hidden_spatial_idx),
+                                            num_neurons_perLayer[0] + 2*int(num_neurons_perLayer[1]/num_hidden_spatial_idx))
+                ]
+    }
 
 initial_weight_hidden = [5] * num_connect_perNeuron[1] * num_neurons_perLayer[1] 
 initial_weight_output = [5] * num_neurons_perLayer[-2] * num_neurons_perLayer[-1]
@@ -248,14 +264,14 @@ weight_vector = \
     ]
 
 ## Specify common Spiking Neuron Parameters
-duration = 150
+duration = 80
 tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 vth_input = 1
 vth_hidden = 40 + 16     # with 2-spike consideration: [(2-1) x 5 x tau_u, 2 x 5 x tau_u)
                          # with 2-spike consideration: [(2-1) x 7 x tau_u, 2 x 7 x tau_u)
 
-vth_output = 200        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
+vth_output = 150        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
                          # with 3-spike consideration: [(4-1) x 7 x tau_u, 4 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
@@ -285,9 +301,9 @@ f_handle.write("supervised_output: {}\n".format(supervised_output))
 ######################################################################################
 ## Define Input & Output Patterns
 mean_early = 0*2*tau_u + 2*tau_u
-std_early = int(3*tau_u/3)
+std_early = int(2*tau_u/3)
 mean_late = 4*2*tau_u - 2*tau_u
-std_late = int(3*tau_u/3)
+std_late = int(2*tau_u/3)
 
 
 input_patterns = ("O", "X", "UA", "DA", "<<", "//", ">>", r"\\", "Bad//", r"Bad\\")
@@ -528,11 +544,13 @@ for instance in range(num_instances):
                                     fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
                                     fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
                                     depth_causal = 1,
-                                    depth_anticausal = 0,
+                                    depth_anticausal = 1,
                                     tau_u=tau_u,
                                     tau_v=tau_v,
                                     threshold=vth_input,
                                     duration=duration,
+                                    spatial_idx=None,
+                                    num_hidden_spatial_idx=None,
                                     max_num_fires=max_num_fires,
                                     training_on=0,
                                     supervised=0
@@ -540,6 +558,8 @@ for instance in range(num_instances):
         if layer_idx == 1:
             depth_causal = 2
             depth_anticausal = 2
+            spatial_idx = [k for k,v in spatial_idx_dict.items() if i in v]
+            spatial_idx = spatial_idx[0]
             if supervised_hidden:
                 training_on = 1
                 supervised = 1
@@ -553,14 +573,16 @@ for instance in range(num_instances):
                                     tau_v=tau_v,
                                     threshold=vth_hidden,
                                     duration=duration,
+                                    spatial_idx=spatial_idx,
+                                    num_hidden_spatial_idx=None,
                                     max_num_fires=max_num_fires,
                                     training_on=training_on,
                                     supervised=supervised
                                     )
 
         if layer_idx == 2:
-            depth_causal = 5
-            depth_anticausal = 25
+            depth_causal = 3        # each spatial location considers depth_causal in-spike events
+            depth_anticausal = 3    # each spatial location stores the last depth_anticausal anti-causal in-spike events
             if supervised_hidden:
                 training_on = 1
                 supervised = 1
@@ -574,6 +596,8 @@ for instance in range(num_instances):
                                     tau_v=tau_v,
                                     threshold=vth_output,
                                     duration=duration,
+                                    spatial_idx=None,
+                                    num_hidden_spatial_idx=num_hidden_spatial_idx,
                                     max_num_fires=max_num_fires,
                                     training_on=training_on,
                                     supervised=supervised
@@ -601,7 +625,8 @@ spike_info = [
                 [
                     {    
                         "fired_synapse_addr": [],
-                        "time"              : None
+                        "time"              : None,
+                        "spatial_idx"       : []
                     }
                     for step in range(0, sn.duration, sn.dt)
                 ] for instance in range(num_instances)
@@ -664,6 +689,9 @@ for instance in range(num_instances):
             spike_info[instance][sim_point]["fired_synapse_addr"].extend(
                 index_duplicate(stimulus_time_vector[instance]["in_latency"], sim_point)
             )
+            spike_info[instance][sim_point]["spatial_idx"].extend(
+                [None] * len(index_duplicate(stimulus_time_vector[instance]["in_latency"], sim_point))
+            )
 
         spike_info[instance][sim_point]["time"] = sim_point
         
@@ -681,15 +709,13 @@ for instance in range(num_instances):
             # update the list of synapses that fired at this sim_point
             if (sn_list[instance][i].fire_cnt != -1):
                 if (sn_list[instance][i].spike_out_info[sn_list[instance][i].fire_cnt]["time"] == sim_point):
-                    if (len(sn_list[instance][i].fan_out_synapse_addr) == 1): # if single fan-out
+                    for key,val in enumerate(sn_list[instance][i].fan_out_synapse_addr):
                         fired_synapse_list[instance][sim_point].append(val)
                         spike_info[instance][sim_point]["fired_synapse_addr"].append(val)
-                    else:   # if multiple fan-out synpases
-                        for key,val in enumerate(sn_list[instance][i].fan_out_synapse_addr):
-                            fired_synapse_list[instance][sim_point].append(val)
-                            spike_info[instance][sim_point]["fired_synapse_addr"].append(val)
+                        spike_info[instance][sim_point]["spatial_idx"].append(sn_list[instance][i].spatial_idx)
                     
                     fired_neuron_list[instance][sim_point].append(sn_list[instance][i].neuron_idx)
+                        
 
                     # if the fired neuron at this sim_point is in the hidden layer
                     if (sn_list[instance][i].layer_idx == num_layers - 2):

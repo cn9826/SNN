@@ -226,7 +226,7 @@ def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_
 printout_dir = "sim_printouts/Contrived16Blocks2Layer10Classes/"
 
 ## Specify Global Connectivity Parmeters
-num_neurons_perLayer = [8, 16, 10]       # Assuming num_neurons_perLayer is the number of connections in FC case
+num_neurons_perLayer = [8, 8, 10]       # Assuming num_neurons_perLayer is the number of connections in FC case
 num_connect_perNeuron = [1,4,-1]        # -1 denotes FC       
 
 max_num_fires = 1
@@ -235,7 +235,7 @@ fan_in_neuron = [
                     [], [], [], [], [], [], [], [],
                     *[[0, 1, 4, 5]] * int(num_neurons_perLayer[1]/2),
                     *[[2, 3, 6, 7]] * int(num_neurons_perLayer[1]/2),
-                    *[[x for x in range(8, 24)]] * num_neurons_perLayer[2]  
+                    *[[x for x in range(8, 16)]] * num_neurons_perLayer[2]  
                 ]
 
 initial_weight_hidden = [5] * num_connect_perNeuron[1] * num_neurons_perLayer[1] 
@@ -255,7 +255,7 @@ vth_input = 1
 vth_hidden = 40 + 16     # with 2-spike consideration: [(2-1) x 5 x tau_u, 2 x 5 x tau_u)
                          # with 2-spike consideration: [(2-1) x 7 x tau_u, 2 x 7 x tau_u)
 
-vth_output = 115        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
+vth_output = 70        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
                          # with 3-spike consideration: [(4-1) x 7 x tau_u, 4 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
@@ -559,8 +559,8 @@ for instance in range(num_instances):
                                     )
 
         if layer_idx == 2:
-            depth_causal = 3
-            depth_anticausal = 13
+            depth_causal = 2
+            depth_anticausal = 6
             if supervised_hidden:
                 training_on = 1
                 supervised = 1

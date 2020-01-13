@@ -270,7 +270,7 @@ num_instances = 4000             # number of training instances per epoch
 ## Simulation Settings
 debug_mode = 1
 plot_response = 0
-plot_InLatency = 1
+plot_InLatency = 0
 
 if supervised_hidden or supervised_output:
     printout_dir = printout_dir + "Supervised/dumpsim.txt"
@@ -560,7 +560,7 @@ for instance in range(num_instances):
 
         if layer_idx == 2:
             depth_causal = 3
-            depth_anticausal = 5
+            depth_anticausal = 13
             if supervised_hidden:
                 training_on = 1
                 supervised = 1

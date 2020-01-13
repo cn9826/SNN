@@ -997,7 +997,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         desired_ff_idx, min_fire_time, 
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
                         WeightRAM, stop_num, coarse_fine_ratio, correct_cnt,
-                        causal_start=2, num_causal=2, anticausal_start=4, num_anticausal=1
+                        causal_start=2, num_causal=2, anticausal_start=12, num_anticausal=2
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])
     # desired_ff_idx = desired_ff_neuron[instance]["ff_neuron"]

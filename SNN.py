@@ -997,17 +997,45 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         desired_ff_idx, min_fire_time, 
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
                         WeightRAM, stop_num, coarse_fine_ratio, correct_cnt,
-                        causal_start=1, num_causal=2, anticausal_start=6, num_anticausal=1
+                        causal_start_output=1, num_causal_output=2, anticausal_start_output=6, num_anticausal_output=1,
+                        causal_start_hidden=1, num_causal_hidden=1, anticausal_start_hidden=1, num_anticausal_hidden=1                        
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])
     # desired_ff_idx = desired_ff_neuron[instance]["ff_neuron"]
     # f2f_neuron_idx should be a single int
-    def hiddenNeuronUpdateRoutine(sn_hidden, instance, reward_signal, isf2f, isIntended, neuron_causal_tag, f_handle, WeightRAM, correct_cnt,stop_num, coarse_fine_ratio):
+    def hiddenNeuronUpdateRoutine(sn_hidden, instance, reward_signal, isf2f, isIntended, 
+                                neuron_causal_tag, f_handle, WeightRAM, 
+                                correct_cnt,stop_num, coarse_fine_ratio,
+                                causal_start_hidden=causal_start_hidden, num_causal_hidden=num_causal_hidden, 
+                                anticausal_start_hidden=anticausal_start_hidden, num_anticausal_hidden=num_anticausal_hidden):
         spike_out_time = sn_hidden.spike_out_info[0]["time"]
-        spike_in_time = [mem["time"] for mem in sn_hidden.spike_in_cache.mem if mem["time"] != None]
-        oldWeight = [mem["weight"] for mem in sn_hidden.spike_in_cache.mem if mem["weight"] != None]
-        fan_in_addr = [mem["fired_synapse_addr"] for mem in sn_hidden.spike_in_cache.mem if mem["fired_synapse_addr"] != None]
-        synapse_causal_tag = [mem["causal_tag"] for mem in sn_hidden.spike_in_cache.mem if mem["causal_tag"] != None]                    
+
+        in_spike_events_causal, in_spike_events_anticausal = \
+            sn_hidden.findSynapseGroup(instance=instance, f_handle=f_handle,
+                                         causal_start=causal_start_hidden, num_causal=num_causal_hidden,
+                                         anticausal_start=anticausal_start_hidden, num_anticausal=num_anticausal_hidden)
+                                         
+        
+        spike_in_time = \
+            [entry["time"] for entry in in_spike_events_causal] + \
+            [entry["time"] for entry in in_spike_events_anticausal]
+
+        oldWeight = \
+            [entry["weight"] for entry in in_spike_events_causal] + \
+            [entry["weight"] for entry in in_spike_events_anticausal]
+
+        fan_in_addr = \
+            [entry["fired_synapse_addr"] for entry in in_spike_events_causal] + \
+            [entry["fired_synapse_addr"] for entry in in_spike_events_anticausal]
+
+        synapse_causal_tag = \
+            [entry["causal_tag"] for entry in in_spike_events_causal] + \
+            [entry["causal_tag"] for entry in in_spike_events_anticausal]
+        
+        # spike_in_time = [mem["time"] for mem in sn_hidden.spike_in_cache.mem if mem["time"] != None]
+        # oldWeight = [mem["weight"] for mem in sn_hidden.spike_in_cache.mem if mem["weight"] != None]
+        # fan_in_addr = [mem["fired_synapse_addr"] for mem in sn_hidden.spike_in_cache.mem if mem["fired_synapse_addr"] != None]
+        # synapse_causal_tag = [mem["causal_tag"] for mem in sn_hidden.spike_in_cache.mem if mem["causal_tag"] != None]                    
         newWeight = sn_hidden.RSTDP_hidden(spike_in_time=spike_in_time, spike_out_time=spike_out_time,
                                         instance=instance, oldWeight=oldWeight,
                                         fan_in_addr=fan_in_addr, 
@@ -1026,7 +1054,10 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                 instance, min_fire_time, f_handle,
                                 PreSynapticIdx_intended, WeightRAM,
                                 correct_cnt, stop_num, coarse_fine_ratio, output_silent=0,
-                                causal_start=causal_start, num_causal=num_causal, anticausal_start=anticausal_start, num_anticausal=num_anticausal
+                                causal_start_output=causal_start_output, num_causal_output=num_causal_output, 
+                                anticausal_start_output=anticausal_start_output, num_anticausal_output=num_anticausal_output,
+                                causal_start_hidden=causal_start_hidden, num_causal_hidden=num_causal_hidden, 
+                                anticausal_start_hidden=anticausal_start_hidden, num_anticausal_hidden=num_anticausal_hidden
                                 ):
         if not isIntended:
             print("Error when calling intendedUpdateRoutine(): function argument isIntended is {}!".format(isIntended))
@@ -1034,8 +1065,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
 
         in_spike_events_causal, in_spike_events_anticausal = \
             sn_intended.findSynapseGroup(instance=instance, f_handle=f_handle,
-                                         causal_start=causal_start, num_causal=num_causal,
-                                         anticausal_start=anticausal_start, num_anticausal=num_anticausal)
+                                         causal_start=causal_start_output, num_causal=num_causal_output,
+                                         anticausal_start=anticausal_start_output, num_anticausal=num_anticausal_output)
         causal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_causal]
         t_in_causal = [entry["time"] for entry in in_spike_events_causal]
         oldWeight_causal = [entry["weight"] for entry in in_spike_events_causal]        
@@ -1107,7 +1138,9 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                 instance, min_fire_time, f_handle,
                                 PreSynapticIdx_nonintended, WeightRAM,
                                 correct_cnt, stop_num, coarse_fine_ratio,
-                                causal_start=causal_start, num_causal=num_causal, anticausal_start=anticausal_start, num_anticausal=num_anticausal):
+                                causal_start_output=causal_start_output, num_causal_output=num_causal_output, 
+                                anticausal_start_output=anticausal_start_output, num_anticausal_output=num_anticausal_output,
+                                ):
         if isIntended:
             print("Error when calling nonintendedUpdateRoutine(): function argument isIntended is {}!".format(isIntended))
             exit(1)
@@ -1116,8 +1149,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
         
         in_spike_events_causal, in_spike_events_anticausal = \
             sn_nonintended.findSynapseGroup(instance=instance, f_handle=f_handle,
-                                         causal_start=causal_start, num_causal=num_causal,
-                                         anticausal_start=anticausal_start, num_anticausal=num_anticausal)
+                                         causal_start=causal_start_output, num_causal=num_causal_output,
+                                         anticausal_start=anticausal_start_output, num_anticausal=num_anticausal_output)
         causal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_causal]
         t_in_causal = [entry["time"] for entry in in_spike_events_causal]
         oldWeight_causal = [entry["weight"] for entry in in_spike_events_causal]        
@@ -1185,8 +1218,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                             reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
                             instance=instance, min_fire_time=min_fire_time, f_handle=f_handle,
                             PreSynapticIdx_nonintended=PreSynapticIdx_nonintended, WeightRAM=WeightRAM,
-                            correct_cnt=correct_cnt, stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio,
-                            causal_start=1, num_causal=1  
+                            correct_cnt=correct_cnt, stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio
                         )              
                         
         elif desired_ff_idx != f2f_neuron_idx:

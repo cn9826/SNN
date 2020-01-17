@@ -249,7 +249,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         return (causal_fan_in_addr, t_in_causal, weight_causal,
                 anticausal_fan_in_addr, t_in_anticausal, weight_anticausal)        
 
-    def findSynapseGroup(self, instance, f_handle, causal_start, num_causal, anticausal_start, num_anticausal, output_or_hidden, debug=1):
+    def findSynapseGroup(self, instance, f_handle, causal_start, num_causal, anticausal_start, num_anticausal, output_or_hidden, 
+                        hiddden_causal_reverse_search=1, hidden_anticausal_reverse_search=0, debug=1):
         if not output_or_hidden in ["output", "hidden"]:
             print("Error when calling SpikingNeruon.findSynapseGroup(): argument \"output_or_hidden\" {} is not sepcified correctly!"
                 .format(output_or_hidden))
@@ -325,13 +326,22 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             ## look for causal in-spike events
             found_cnt_causal = 0
             in_spike_events_causal = []
-            for i in range(anticausal_starting_idx-1, -1, -1):
-                if (self.spike_in_cache.mem[i]["time"]!=None 
-                    and self.spike_in_cache.mem[i]["causal_tag"] == 1):
-                    in_spike_events_causal.append(self.spike_in_cache.mem[i])
-                    found_cnt_causal += 1
-                if found_cnt_causal == num_causal:
-                    break
+            if hiddden_causal_reverse_search:            
+                for i in range(anticausal_starting_idx-1, -1, -1):
+                    if (self.spike_in_cache.mem[i]["time"]!=None 
+                        and self.spike_in_cache.mem[i]["causal_tag"] == 1):
+                        in_spike_events_causal.append(self.spike_in_cache.mem[i])
+                        found_cnt_causal += 1
+                    if found_cnt_causal == num_causal:
+                        break
+            elif not hiddden_causal_reverse_search:
+                for i in range(0, anticausal_starting_idx, 1):
+                    if (self.spike_in_cache.mem[i]["time"]!=None 
+                        and self.spike_in_cache.mem[i]["causal_tag"] == 1):
+                        in_spike_events_causal.append(self.spike_in_cache.mem[i])
+                        found_cnt_causal += 1
+                    if found_cnt_causal == num_causal:
+                        break
             if found_cnt_causal < num_causal:
                 print("Instance {}: Hidden Neuron {} has found {} causal SpikeInCache entries, less than specified {}"
                     .format(instance, self.neuron_idx, found_cnt_causal, num_causal)) 
@@ -342,13 +352,22 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             ## look for anti-causal in-spike events
             found_cnt_anticausal = 0
             in_spike_events_anticausal = []
-            for i in range(anticausal_starting_idx, self.spike_in_cache.depth, 1):
-                if (self.spike_in_cache.mem[i]["time"]!=None 
-                    and self.spike_in_cache.mem[i]["causal_tag"] == 0):
-                    in_spike_events_anticausal.append(self.spike_in_cache.mem[i])
-                    found_cnt_anticausal += 1
-                if found_cnt_anticausal == num_anticausal:
-                    break
+            if not hidden_anticausal_reverse_search:            
+                for i in range(anticausal_starting_idx, self.spike_in_cache.depth, 1):
+                    if (self.spike_in_cache.mem[i]["time"]!=None 
+                        and self.spike_in_cache.mem[i]["causal_tag"] == 0):
+                        in_spike_events_anticausal.append(self.spike_in_cache.mem[i])
+                        found_cnt_anticausal += 1
+                    if found_cnt_anticausal == num_anticausal:
+                        break
+            elif hidden_anticausal_reverse_search:            
+                for i in range(self.spike_in_cache.depth-1, anticausal_starting_idx-1, 1):
+                    if (self.spike_in_cache.mem[i]["time"]!=None 
+                        and self.spike_in_cache.mem[i]["causal_tag"] == 0):
+                        in_spike_events_anticausal.append(self.spike_in_cache.mem[i])
+                        found_cnt_anticausal += 1
+                    if found_cnt_anticausal == num_anticausal:
+                        break                    
             if found_cnt_anticausal < num_anticausal:
                 print("Instance {}: Hidden Neuron {} has found {} anti-causal SpikeInCache entries, less than specified {}"
                     .format(instance, self.neuron_idx, found_cnt_anticausal, num_anticausal)) 
@@ -1091,7 +1110,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
                         WeightRAM, stop_num, coarse_fine_ratio, correct_cnt,
                         causal_start_output=2, num_causal_output=1, anticausal_start_output=6, num_anticausal_output=1,
-                        num_causal_hidden=1, num_anticausal_hidden=1                        
+                        num_causal_hidden=1, num_anticausal_hidden=1                       
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])
     # desired_ff_idx = desired_ff_neuron[instance]["ff_neuron"]

@@ -255,8 +255,8 @@ vth_input = 1
 vth_hidden = 40 + 16     # with 2-spike consideration: [(2-1) x 5 x tau_u, 2 x 5 x tau_u)
                          # with 2-spike consideration: [(2-1) x 7 x tau_u, 2 x 7 x tau_u)
 
-vth_output = 70        # with 3-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
-                         # with 3-spike consideration: [(4-1) x 7 x tau_u, 4 x 7 x tau_u)  
+vth_output = 70          # with 4-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
+                         # with 4-spike consideration: [(4-1) x 7 x tau_u, 4 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
@@ -265,7 +265,7 @@ stop_num = 200
 coarse_fine_ratio=0.025
 
 ## Training Dataset Parameters
-num_instances = 4000             # number of training instances per epoch
+num_instances = 2000             # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1

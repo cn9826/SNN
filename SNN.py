@@ -361,7 +361,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     if found_cnt_anticausal == num_anticausal:
                         break
             elif hidden_anticausal_reverse_search:            
-                for i in range(self.spike_in_cache.depth-1, anticausal_starting_idx-1, 1):
+                for i in range(self.spike_in_cache.depth-1, anticausal_starting_idx-1, -1):
                     if (self.spike_in_cache.mem[i]["time"]!=None 
                         and self.spike_in_cache.mem[i]["causal_tag"] == 0):
                         in_spike_events_anticausal.append(self.spike_in_cache.mem[i])
@@ -1109,8 +1109,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         desired_ff_idx, min_fire_time, 
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
                         WeightRAM, stop_num, coarse_fine_ratio, correct_cnt,
-                        causal_start_output=2, num_causal_output=1, anticausal_start_output=6, num_anticausal_output=1,
-                        num_causal_hidden=1, num_anticausal_hidden=1                       
+                        causal_start_output=2, num_causal_output=1, anticausal_start_output=5, num_anticausal_output=1,
+                        num_causal_hidden=2, num_anticausal_hidden=2                       
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])
     # desired_ff_idx = desired_ff_neuron[instance]["ff_neuron"]

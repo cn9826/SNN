@@ -779,8 +779,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     f_handle,
                     reward_signal, isf2f, isIntended,
                     successive_correct_cnt, coarse_fine_cut_off,
-                    A_causal_coarse=2, A_causal_fine=1, tau_causal=30,
-                    A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=30,
+                    A_causal_coarse=2, A_causal_fine=1, tau_causal=35,
+                    A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=35,
                     max_weight=7, min_weight=0, deltaWeight_default=2,
                     debug=0): 
         

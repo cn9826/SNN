@@ -58,9 +58,4 @@ plt.grid(True)
 fig1.show()
 
 
-
-
-
-
-
 plt.show()

@@ -261,21 +261,15 @@ import matplotlib.pyplot as plt
 # print(fan_in_neuron)
 
 #%%
-num_causal = 2
-in_spike_events_causal = \
-    []
+# A_pos = 1 
+# tau_pos = 10
+# for s in range(-30, 1, 1):
+#     deltaWeight = round(A_pos * math.exp(s/tau_pos))
+#     print("s = {}\t\t deltaWeight = {}".format(s, deltaWeight))
 
-mem_entry = {
-                "time"          :   1,
-                "causal_tag"    :   0,
-                "weight"        :   7,
-                "fired_address" : 286
-            }
+#%%
+list1= [0, 1, 2, 3]
+list2 = [x+4 for x in list1]
 
-in_spike_events_causal.append(mem_entry)
-
-for entry in in_spike_events_causal:
-    if not bool(entry):
-        in_spike_events_causal.remove(entry)
-
-print(in_spike_events_causal)
+for (x1, x2) in (list1, list2):
+    print("x1 : {}\t x2: {}".format(x1, x2))

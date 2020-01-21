@@ -214,18 +214,71 @@ def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_
 
 #%% Parameters to tune
 ######################################################################################
-printout_dir = "sim_printouts/FourEdgeMaps4Classes/"
+printout_dir = "sim_printouts/FourEdgeMapsBig/"
+sheet_dir = "sim_printouts/FourEdgeMapsBig/ConnectivityTable.xlsx"
 num_categories = 4
 num_edge_maps = 4
 W_input = 4
-F_hidden = 3
+F_hidden = 2
 S_hidden = 1
-depth_hidden_per_sublocation = 5
+depth_hidden_per_sublocation = 4
 
-
-input_connectivity, hidden_connectivity, output_connectivity = \
+## Initialize Connectivity
+input_connectivity, hidden_connectivity, output_connectivity, writer = \
     NetworkConnectivity.initializeNetWorkConnectivity(
         num_categories=num_categories, num_edge_maps=num_edge_maps, W_input=W_input,
         F_hidden=F_hidden, S_hidden=S_hidden, 
-        depth_hidden_per_sublocation=depth_hidden_per_sublocation
+        depth_hidden_per_sublocation=depth_hidden_per_sublocation,
+        sheet_dir=sheet_dir
     )
+
+inital_weight_input = [10] * len(input_connectivity) 
+initial_weight_hidden = [5] * len(hidden_connectivity) * F_hidden**2 * num_edge_maps
+initial_weight_output = [5] * len(output_connectivity) * len(hidden_connectivity) 
+weight_vector = \
+    [
+        *inital_weight_input, *initial_weight_hidden, *initial_weight_output
+    ]
+#%% Instantiate ConnectivityTable, WeightRAM and PotentialRAM
+## Initialize Connectivity Table -- consolidate input, hidden and output connectivity 
+num_neurons = len(input_connectivity) + len(hidden_connectivity) + len(output_connectivity)
+ConnectivityTable = SNN.ConnectivityInfo(num_neurons=num_neurons)
+
+for i in range(len(input_connectivity)):
+    neuron_idx = i
+    ConnectivityTable.layer_num[neuron_idx] = 0
+    ConnectivityTable.fan_in_neuron_idx[neuron_idx] = input_connectivity[i]["fan_in_neuron_indices"]
+    ConnectivityTable.fan_in_synapse_addr[neuron_idx] = input_connectivity[i]["fan_in_synapse_addrs"]
+    ConnectivityTable.fan_out_neuron_idx[neuron_idx] = input_connectivity[i]["fan_out_neuron_indices"]
+    ConnectivityTable.fan_out_synapse_addr[neuron_idx] = input_connectivity[i]["fan_out_synapse_indices"]
+
+for i in range(len(hidden_connectivity)):
+    neuron_idx = len(input_connectivity) + i
+    ConnectivityTable.layer_num[neuron_idx] = 1
+    ConnectivityTable.fan_in_neuron_idx[neuron_idx] = hidden_connectivity[i]["fan_in_neuron_indices"]
+    ConnectivityTable.fan_in_synapse_addr[neuron_idx] = hidden_connectivity[i]["fan_in_synapse_addrs"]
+    ConnectivityTable.fan_out_neuron_idx[neuron_idx] = hidden_connectivity[i]["fan_out_neuron_indices"]
+    ConnectivityTable.fan_out_synapse_addr[neuron_idx] = hidden_connectivity[i]["fan_out_synapse_indices"]
+
+for i in range(len(output_connectivity)):
+    neuron_idx = len(input_connectivity) + len(hidden_connectivity) + i
+    ConnectivityTable.layer_num[neuron_idx] = 2
+    ConnectivityTable.fan_in_neuron_idx[neuron_idx] = output_connectivity[i]["fan_in_neuron_indices"]
+    ConnectivityTable.fan_in_synapse_addr[neuron_idx] = output_connectivity[i]["fan_in_synapse_addrs"]
+    ConnectivityTable.fan_out_neuron_idx[neuron_idx] = output_connectivity[i]["fan_out_neuron_indices"]
+    ConnectivityTable.fan_out_synapse_addr[neuron_idx] = output_connectivity[i]["fan_out_synapse_indices"]
+
+
+## Initialize WeightRAM
+num_synapses = output_connectivity[-1]["fan_in_synapse_addrs"][-1] + 1 
+WeightRAM = SNN.WeightRAM(num_synapses=num_synapses)
+for synapse_addr in range(num_synapses):
+    post_neuron_idx_WRAM, _ = index_2d(ConnectivityTable.fan_in_synapse_addr, synapse_addr)
+    WeightRAM.post_neuron_idx[synapse_addr] = post_neuron_idx_WRAM
+    WeightRAM.weight[synapse_addr] = weight_vector[synapse_addr]
+    if synapse_addr >= len(input_connectivity):
+        pre_neuron_idx_WRAM, _ = index_2d(ConnectivityTable.fan_out_synapse_addr, synapse_addr)
+        WeightRAM.pre_neuron_idx[synapse_addr] = pre_neuron_idx_WRAM
+
+## Initialize PotentialRAM
+PotentialRAM = SNN.PotentialRAM(num_neurons=num_neurons)

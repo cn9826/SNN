@@ -1,3 +1,5 @@
+import pandas as pd
+
 def index_2d_multirows (list_2d, element):
     row_indices = []
     indices_in_row_list = []
@@ -11,7 +13,7 @@ def index_2d_multirows (list_2d, element):
     return (row_indices, indices_in_row_list)
 
 def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidden, S_hidden,
-                                  depth_hidden_per_sublocation):
+                                  depth_hidden_per_sublocation, sheet_dir):
     num_input_neurons = W_input**2 * num_edge_maps 
 
     W_hidden = \
@@ -26,6 +28,9 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
 #############################################################################################
     # a list of indicies for output layer neurons
     output_neuron_list = [idx for idx in range(num_input_neurons+num_hidden_neurons, num_input_neurons+num_hidden_neurons+num_categories)]
+
+    # a list of indices for hidden layer neurons
+    hidden_neuron_list_flattened = [idx for idx in range(num_input_neurons, num_input_neurons+num_hidden_neurons)]
 
     # a list of indices for input layer neurons
     input_neuron_list = [idx for idx in range(0,num_input_neurons,1)]
@@ -42,7 +47,7 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
         for depth_idx in range(depth_hidden_per_sublocation):
             hidden_neuron_list[sublocation_idx][depth_idx] = \
                 num_input_neurons + sublocation_idx * depth_hidden_per_sublocation + depth_idx
-
+    
     ## specify pixel indices in the receptive field of each hidden layer neuron within one depth slice
     ## based on the row-major movement of convolutional kernel
     receptive_pixel_indices = \
@@ -92,6 +97,7 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
             {
                 "neuron_idx"            :   None,
                 "depth_idx"             :   None, 
+                "sublocation_idx"       :   None,
                 "fan_in_synapse_addrs"  :   None,
                 "fan_in_neuron_indices" :   None,
                 "fan_out_synapse_indices":   None,
@@ -105,7 +111,8 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
         
         sublocation_idx, depth_idx = divmod(idx, depth_hidden_per_sublocation)
         hidden_connectivity[idx]["depth_idx"] = depth_idx
-        
+        hidden_connectivity[idx]["sublocation_idx"] = sublocation_idx
+
         fan_in_synapses = fan_in_synapse_addrs[sublocation_idx][depth_idx]
         hidden_connectivity[idx]["fan_in_synapse_addrs"] = fan_in_synapses
         
@@ -144,7 +151,7 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
         # for each sublocation_idx, traverse all the slices
         for i in range(len(sublocation_idx_list)):
             sublocation_idx = sublocation_idx_list[i]
-            kernel_element_idx = kernel_element_idx_list[i] 
+            kernel_element_idx = kernel_element_idx_list[i]  
             input_connectivity[idx]["receptive_field_info"]["sublocation_idx"].append(sublocation_idx)
             input_connectivity[idx]["receptive_field_info"]["kernel_element_idx"].append(kernel_element_idx)
 
@@ -190,13 +197,89 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
     for idx in range(num_output_neurons):
         output_connectivity[idx]["neuron_idx"] = idx + first_neuron_idx_output
         output_connectivity[idx]["category_idx"] = idx
+        output_connectivity[idx]["fan_in_neuron_indices"] = hidden_neuron_list_flattened
         output_connectivity[idx]["fan_in_synapse_addrs"] = \
             [
-                synapse_idx for synapse_idx in range(first_fan_in_synapse_output + idx * num_input_neurons, 
-                    first_fan_in_synapse_output + (idx + 1) * num_input_neurons)
+                synapse_idx for synapse_idx in range(first_fan_in_synapse_output + idx * num_hidden_neurons, 
+                    first_fan_in_synapse_output + (idx + 1) * num_hidden_neurons)
             ] 
-        for sublocation_idx in range(len(hidden_neuron_list)):
-            output_connectivity[idx]["fan_out_neuron_indices"].extend(hidden_neuron_list[sublocation_idx])
+        # for sublocation_idx in range(len(hidden_neuron_list)):
+        #     output_connectivity[idx]["fan_out_neuron_indices"].extend(hidden_neuron_list[sublocation_idx])
 
 #############################################################################################
-    return(input_connectivity, hidden_connectivity, output_connectivity)                        
+
+#%% write connectivity info to spreadsheet
+    input_layer_df = \
+        pd.DataFrame(
+            {
+                'Layer Index'       :   [0] * num_input_neurons,  
+                'Neuron Index'      :   input_neuron_list,
+                'Edge Map Index'    :   [input_connectivity[i]["edge_map_idx"] for i in range(num_input_neurons)],
+                'Sublocation Index' :   [input_connectivity[i]["receptive_field_info"]["sublocation_idx"] for i in range(num_input_neurons)],
+                'Kernel Element Index' : [input_connectivity[i]["receptive_field_info"]["kernel_element_idx"] for i in range(num_input_neurons)],
+                'Fan-in Neuron Indices':  [None for i in range(num_input_neurons)],
+                'Fan-in Synapse Indices': [input_connectivity[i]["fan_in_synapse_addrs"] for i in range(num_input_neurons)],
+                'Fan-out Neuron Indices': [input_connectivity[i]["fan_out_neuron_indices"] for i in range(num_input_neurons)],
+                'Fan-out Synapse Indices': [input_connectivity[i]["fan_out_synapse_indices"] for i in range(num_input_neurons)]
+            
+            }
+        )
+    input_layer_df.name = 'Input Layer'
+    
+    hidden_layer_df = \
+        pd.DataFrame(
+            {
+                'Layer Index'       :   [1] * num_hidden_neurons,
+                'Neuron Index'      :   hidden_neuron_list_flattened,
+                'Depth Index'       :   [hidden_connectivity[i]["depth_idx"] for i in range(num_hidden_neurons)],
+                'Sublocation Index' :   [hidden_connectivity[i]["sublocation_idx"] for i in range(num_hidden_neurons)],
+                'Null Field0'       :   [None] * num_hidden_neurons,
+                'Fan-in Neuron Indices':  [hidden_connectivity[i]["fan_in_neuron_indices"] for i in range(num_hidden_neurons)],
+                'Fan-in Synapse Indices': [hidden_connectivity[i]["fan_in_synapse_addrs"] for i in range(num_hidden_neurons)],
+                'Fan-out Neuron Indices': [hidden_connectivity[i]["fan_out_neuron_indices"] for i in range(num_hidden_neurons)],
+                'Fan-out Synapse Indices': [hidden_connectivity[i]["fan_out_synapse_indices"] for i in range(num_hidden_neurons)]
+            }   
+        )
+    hidden_layer_df.name = "Hidden Layer"
+
+    output_layer_df = \
+        pd.DataFrame(
+            {
+                'Layer Index'       :   [2] * num_output_neurons,
+                'Neuron Index'      :   output_neuron_list,
+                'Category Index'    :   [output_connectivity[i]["category_idx"] for i in range(num_output_neurons)],
+                'Null Field1'       :   [None] * num_output_neurons,
+                'Null Field2'       :   [None] * num_output_neurons,
+                'Fan-in Neuron Indices':  [output_connectivity[i]["fan_in_neuron_indices"] for i in range(num_output_neurons)],
+                'Fan-in Synapse Indices': [output_connectivity[i]["fan_in_synapse_addrs"] for i in range(num_output_neurons)],
+                'Fan-out Neuron Indices': [None] * num_output_neurons,
+                'Fan-out Synapse Indices': [None] * num_output_neurons
+            }
+        )
+    output_layer_df.name="Output Layer"
+
+    writer = pd.ExcelWriter(sheet_dir, engine='xlsxwriter')
+    workbook = writer.book
+    merge_format = workbook.add_format({
+        'bold'  : True,
+        'align' : 'center'
+                                        })
+    cell_format = workbook.add_format({'align':'center'})
+
+    input_layer_df.to_excel(writer, sheet_name='Sheet1', index=False, startrow=0, startcol=0)
+    hidden_layer_df.to_excel(writer, sheet_name='Sheet1', index=False, startrow=input_layer_df.shape[0]+5, startcol=0)
+    output_layer_df.to_excel(writer, sheet_name='Sheet1', index=False, startrow=input_layer_df.shape[0]+5+hidden_layer_df.shape[0]+4, startcol=0)
+
+        
+    worksheet = writer.sheets['Sheet1']
+    # worksheet.merge_range('A1:I1', input_layer_df.name, merge_format)
+    # worksheet.merge_range('A69:I69', hidden_layer_df.name, merge_format)
+    # worksheet.merge_range('A119:I119', hidden_layer_df.name, merge_format)
+
+
+    worksheet.set_column('A:K', 20, cell_format)
+    writer.save()
+    
+    return(input_connectivity, hidden_connectivity, output_connectivity, writer)                        
+
+

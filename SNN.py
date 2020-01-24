@@ -42,16 +42,16 @@ class WeightRAM:   # indexed by fan_in_synapse_addr
         self.post_neuron_idx = [None for row in range(num_synapses)]
 
 class PotentialRAM:  # indexed by neuron_idx
-    def __init__(self, num_neurons, num_instances=1):
+    def __init__(self, num_neurons):
+        self.num_neurons = num_neurons
         self.neuron_idx = range(num_neurons) 
-        self.potential =    [  
-                                [0 for neurons in range(num_neurons)] 
-                                for instance in range(num_instances)
-                            ]
+        self.potential = [0 for neurons in range(num_neurons)] 
         self.fan_out_synapse_addr = [
                                         [] 
                                         for row in range(num_neurons)    
                                     ]
+    def clearPotential(self):
+        self.potential = [0 for neurons in range(self.num_neurons)]
 
 class SpikeIncache:
     def __init__(self, depth_causal=4, depth_anticausal=2):
@@ -92,6 +92,18 @@ class SpikeIncache:
                     self.mem[j]["weight"] = newWeight[i]
                     break
     
+    def clearMem(self):
+        self.causal_spike_in_cnt = 0
+        self.write_ptr = 0
+        self.mem =  [
+                        {
+                            "fired_synapse_addr"    :   None,
+                            "causal_tag"            :   None,
+                            "weight"                :   None,
+                            "time"                  :   None
+                        } for entry in range(self.depth)
+                    ]
+ 
 class SpikeIncache_Hidden:
     def __init__(self, depth_causal=2, depth_anticausal=2):
         self.depth_causal = depth_causal
@@ -121,6 +133,18 @@ class SpikeIncache_Hidden:
             # then increment write_ptr
             self.write_ptr += 1            
 
+    def clearMem(self):
+        self.write_ptr = 0
+        self.fired = 0
+        self.mem =  [
+                        {
+                            "fired_synapse_addr"    :   None,
+                            "causal_tag"            :   None,
+                            "weight"                :   None,
+                            "time"                  :   None
+                        } for entry in range(self.depth)
+                    ]
+        
 class SpikingNeuron:   # this class can be viewed as the functional unit that updates neuron states
     # shared Class Variables
     # time step resolution w.r.t. duration
@@ -1101,8 +1125,19 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 if debug_mode:
                     f_handle.write("Instance {}: Neuron {} at Layer{} has fired {} times at step {}\n"
                         .format(instance, self.neuron_idx, self.layer_idx,self.fire_cnt + 1, [entry["time"] for entry in self.spike_out_info]))               
-
-
+    
+    def clearStateVariables(self):
+        self.u = [0] * int(round(self.duration/SpikingNeuron.dt))
+        self.v = [0] * int(round(self.duration/SpikingNeuron.dt))
+        self.fire_cnt = -1
+        
+        # basically not used any more
+        self.last_spike_in_info = []
+        self.causal_spike_in_info = []
+        self.spike_in_cache.clearMem()
+        self.oldWeight = None
+        self.causal_fan_in_addr = None
+        
 def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         supervised_hidden, supervised_output, f_handle, 
                         PreSynapticIdx_intended, PreSynapticIdx_nonintended,

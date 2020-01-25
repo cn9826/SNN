@@ -945,7 +945,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     A_causal_coarse=2, A_causal_fine=1, tau_causal=30,  
                     A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=30,
                     A_const_coarse=2, A_const_fine=1,
-                    max_weight=7, min_weight=-8,
+                    max_weight=7, min_weight=0,
                     debug=0):
 
         # oldWeight and newWeight are lists of integers

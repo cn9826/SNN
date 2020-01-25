@@ -1,4 +1,10 @@
 import pandas as pd
+import SNN
+
+def index_2d (list_2d, element):
+    for row, row_list in enumerate(list_2d):
+        if element in row_list:
+            return (row, row_list.index(element))
 
 def index_2d_multirows (list_2d, element):
     row_indices = []
@@ -13,7 +19,7 @@ def index_2d_multirows (list_2d, element):
     return (row_indices, indices_in_row_list)
 
 def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidden, S_hidden,
-                                  depth_hidden_per_sublocation, sheet_dir):
+                                  depth_hidden_per_sublocation, weight_vector, sheet_dir):
     num_input_neurons = W_input**2 * num_edge_maps 
 
     W_hidden = \
@@ -23,7 +29,7 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
     num_hidden_neurons_per_slice = W_hidden**2
     num_hidden_neurons = num_hidden_neurons_per_slice * depth_hidden_per_sublocation
     num_output_neurons = num_categories
-
+    num_neurons = num_input_neurons + num_hidden_neurons + num_output_neurons
 #%% Establish Connectivity Information
 #############################################################################################
     # a list of indicies for output layer neurons
@@ -203,9 +209,51 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
                 synapse_idx for synapse_idx in range(first_fan_in_synapse_output + idx * num_hidden_neurons, 
                     first_fan_in_synapse_output + (idx + 1) * num_hidden_neurons)
             ] 
-        # for sublocation_idx in range(len(hidden_neuron_list)):
-        #     output_connectivity[idx]["fan_out_neuron_indices"].extend(hidden_neuron_list[sublocation_idx])
 
+###################### Initialize Connectivity Table ##################
+    ConnectivityTable = SNN.ConnectivityInfo(num_neurons=num_neurons)
+    for i in range(num_input_neurons):
+        neuron_idx = i
+        ConnectivityTable.layer_num[neuron_idx] = 0
+        ConnectivityTable.fan_in_neuron_idx[neuron_idx] = input_connectivity[i]["fan_in_neuron_indices"]
+        ConnectivityTable.fan_in_synapse_addr[neuron_idx] = input_connectivity[i]["fan_in_synapse_addrs"]
+        ConnectivityTable.fan_out_neuron_idx[neuron_idx] = input_connectivity[i]["fan_out_neuron_indices"]
+        ConnectivityTable.fan_out_synapse_addr[neuron_idx] = input_connectivity[i]["fan_out_synapse_indices"]
+
+    for i in range(num_hidden_neurons):
+        neuron_idx = num_input_neurons + i
+        ConnectivityTable.layer_num[neuron_idx] = 1
+        ConnectivityTable.fan_in_neuron_idx[neuron_idx] = hidden_connectivity[i]["fan_in_neuron_indices"]
+        ConnectivityTable.fan_in_synapse_addr[neuron_idx] = hidden_connectivity[i]["fan_in_synapse_addrs"]
+        ConnectivityTable.fan_out_neuron_idx[neuron_idx] = hidden_connectivity[i]["fan_out_neuron_indices"]
+        ConnectivityTable.fan_out_synapse_addr[neuron_idx] = hidden_connectivity[i]["fan_out_synapse_indices"]
+
+    for i in range(num_output_neurons):
+        neuron_idx = num_input_neurons + num_hidden_neurons + i
+        ConnectivityTable.layer_num[neuron_idx] = 2
+        ConnectivityTable.fan_in_neuron_idx[neuron_idx] = output_connectivity[i]["fan_in_neuron_indices"]
+        ConnectivityTable.fan_in_synapse_addr[neuron_idx] = output_connectivity[i]["fan_in_synapse_addrs"]
+        ConnectivityTable.fan_out_neuron_idx[neuron_idx] = output_connectivity[i]["fan_out_neuron_indices"]
+        ConnectivityTable.fan_out_synapse_addr[neuron_idx] = output_connectivity[i]["fan_out_synapse_indices"]
+    
+#############################################################################################
+
+###################### Initialize WeightRAM #########################
+    num_synapses = output_connectivity[-1]["fan_in_synapse_addrs"][-1] + 1 
+    WeightRAM = SNN.WeightRAM(num_synapses=num_synapses)
+    for synapse_addr in range(num_synapses):
+        post_neuron_idx_WRAM, _ = index_2d(ConnectivityTable.fan_in_synapse_addr, synapse_addr)
+        WeightRAM.post_neuron_idx[synapse_addr] = post_neuron_idx_WRAM
+        WeightRAM.weight[synapse_addr] = weight_vector[synapse_addr]
+        if synapse_addr >= num_input_neurons:
+            pre_neuron_idx_WRAM, _ = index_2d(ConnectivityTable.fan_out_synapse_addr, synapse_addr)
+            WeightRAM.pre_neuron_idx[synapse_addr] = pre_neuron_idx_WRAM
+#############################################################################################
+
+
+###################### Initialize PotentialRAM #########################
+    PotentialRAM = SNN.PotentialRAM(num_neurons=num_neurons)
+    PotentialRAM.fan_out_synapse_addr = ConnectivityTable.fan_out_synapse_addr
 #############################################################################################
 
 #%% write connectivity info to spreadsheet
@@ -258,6 +306,17 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
         )
     output_layer_df.name="Output Layer"
 
+    synapse_connectivity_df = \
+        pd.DataFrame(
+            {
+                'Synapse Index'         :   [i for i in range(num_synapses)],
+                'Presynpatic Neuron'    :   WeightRAM.pre_neuron_idx,
+                'Postsynaptic Neuron'   :   WeightRAM.post_neuron_idx
+            }
+        )
+
+
+
     writer = pd.ExcelWriter(sheet_dir, engine='xlsxwriter')
     workbook = writer.book
     merge_format = workbook.add_format({
@@ -269,17 +328,22 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
     input_layer_df.to_excel(writer, sheet_name='Sheet1', index=False, startrow=0, startcol=0)
     hidden_layer_df.to_excel(writer, sheet_name='Sheet1', index=False, startrow=input_layer_df.shape[0]+5, startcol=0)
     output_layer_df.to_excel(writer, sheet_name='Sheet1', index=False, startrow=input_layer_df.shape[0]+5+hidden_layer_df.shape[0]+4, startcol=0)
-
-        
-    worksheet = writer.sheets['Sheet1']
+    worksheet1 = writer.sheets['Sheet1']
     # worksheet.merge_range('A1:I1', input_layer_df.name, merge_format)
     # worksheet.merge_range('A69:I69', hidden_layer_df.name, merge_format)
     # worksheet.merge_range('A119:I119', hidden_layer_df.name, merge_format)
-
-
-    worksheet.set_column('A:K', 20, cell_format)
-    writer.save()
+    worksheet1.set_column('A:K', 20, cell_format)
     
-    return(input_connectivity, hidden_connectivity, output_connectivity, writer)                        
+
+    synapse_connectivity_df.to_excel(writer, sheet_name='Sheet2', index=False, startrow=0, startcol=0)
+    worksheet2 = writer.sheets['Sheet2']
+    worksheet2.set_column('A:C', 20, cell_format)
+  
+  
+    writer.save()
+
+
+
+    return(input_connectivity, hidden_connectivity, output_connectivity, ConnectivityTable, WeightRAM, PotentialRAM, writer)                        
 
 

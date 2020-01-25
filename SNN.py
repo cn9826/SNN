@@ -121,17 +121,27 @@ class SpikeIncache_Hidden:
                     ]
     def writeSpikeInInfo(self, fired_synapse_addr, time, weight):
         if self.write_ptr < self.depth:
-            # write first 
-            self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
-            self.mem[self.write_ptr]["time"] = time
-            self.mem[self.write_ptr]["weight"] = weight
-            self.mem[self.write_ptr]["causal_tag"] = 0
+            # check if the causal entry has been filled
+            if self.write_ptr < self.depth_causal:
+                # write first 
+                self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
+                self.mem[self.write_ptr]["time"] = time
+                self.mem[self.write_ptr]["weight"] = weight
+                self.mem[self.write_ptr]["causal_tag"] = 1
+                # then increment write_ptr
+                self.write_ptr += 1
             # different from SpikeIncache for output layer neurons, SpikeIncache for hidden layer 
             # draws a causal/anti-causal cutoff depending on whether this hidden neuron has fired or not
-            if not self.fired:
-                self.mem[self.write_ptr]["causal_tag"] = 1
-            # then increment write_ptr
-            self.write_ptr += 1            
+            else:
+                # only going to record in-spike event as anti-causal if the hidden neuron
+                # has already fired
+                if self.fired:
+                    self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
+                    self.mem[self.write_ptr]["time"] = time
+                    self.mem[self.write_ptr]["weight"] = weight
+                    self.mem[self.write_ptr]["causal_tag"] = 0
+                    self.write_ptr += 1
+            
 
     def clearMem(self):
         self.write_ptr = 0
@@ -274,7 +284,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 anticausal_fan_in_addr, t_in_anticausal, weight_anticausal)        
 
     def findSynapseGroup(self, instance, f_handle, causal_start, num_causal, anticausal_start, num_anticausal, output_or_hidden, 
-                        hiddden_causal_reverse_search=1, hidden_anticausal_reverse_search=0, debug=1):
+                        hidden_causal_reverse_search=1, hidden_anticausal_reverse_search=0, debug=1):
         if not output_or_hidden in ["output", "hidden"]:
             print("Error when calling SpikingNeruon.findSynapseGroup(): argument \"output_or_hidden\" {} is not sepcified correctly!"
                 .format(output_or_hidden))
@@ -350,7 +360,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             ## look for causal in-spike events
             found_cnt_causal = 0
             in_spike_events_causal = []
-            if hiddden_causal_reverse_search:            
+            if hidden_causal_reverse_search:            
                 for i in range(anticausal_starting_idx-1, -1, -1):
                     if (self.spike_in_cache.mem[i]["time"]!=None 
                         and self.spike_in_cache.mem[i]["causal_tag"] == 1):
@@ -358,7 +368,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                         found_cnt_causal += 1
                     if found_cnt_causal == num_causal:
                         break
-            elif not hiddden_causal_reverse_search:
+            elif not hidden_causal_reverse_search:
                 for i in range(0, anticausal_starting_idx, 1):
                     if (self.spike_in_cache.mem[i]["time"]!=None 
                         and self.spike_in_cache.mem[i]["causal_tag"] == 1):
@@ -805,7 +815,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     successive_correct_cnt, coarse_fine_cut_off,
                     A_causal_coarse=2, A_causal_fine=1, tau_causal=50,
                     A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=50,
-                    max_weight=7, min_weight=0, deltaWeight_default=2,
+                    max_weight=7, min_weight=-8, deltaWeight_default=2,
                     debug=0): 
         
         if successive_correct_cnt >= coarse_fine_cut_off:   # determine A
@@ -935,7 +945,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     A_causal_coarse=2, A_causal_fine=1, tau_causal=30,  
                     A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=30,
                     A_const_coarse=2, A_const_fine=1,
-                    max_weight=7, min_weight=0,
+                    max_weight=7, min_weight=-8,
                     debug=0):
 
         # oldWeight and newWeight are lists of integers
@@ -1137,15 +1147,16 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         self.spike_in_cache.clearMem()
         self.oldWeight = None
         self.causal_fan_in_addr = None
-        
+        self.spike_out_info = [] 
+
 def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         supervised_hidden, supervised_output, f_handle, 
                         PreSynapticIdx_intended, PreSynapticIdx_nonintended,
                         desired_ff_idx, min_fire_time, 
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
                         WeightRAM, stop_num, coarse_fine_ratio, correct_cnt,
-                        causal_start_output=2, num_causal_output=1, anticausal_start_output=5, num_anticausal_output=1,
-                        num_causal_hidden=2, num_anticausal_hidden=2                       
+                        causal_start_output=4, num_causal_output=3, anticausal_start_output=28, num_anticausal_output=3,
+                        num_causal_hidden=3, num_anticausal_hidden=3, debug_mode=0                       
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])
     # desired_ff_idx = desired_ff_neuron[instance]["ff_neuron"]
@@ -1154,14 +1165,16 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                 neuron_causal_tag, f_handle, WeightRAM, 
                                 correct_cnt,stop_num, coarse_fine_ratio,
                                 num_causal_hidden=num_causal_hidden, 
-                                num_anticausal_hidden=num_anticausal_hidden):
+                                num_anticausal_hidden=num_anticausal_hidden,
+                                debug_mode=debug_mode):
         spike_out_time = sn_hidden.spike_out_info[0]["time"]
 
         in_spike_events_causal, in_spike_events_anticausal = \
             sn_hidden.findSynapseGroup(instance=instance, f_handle=f_handle,
                                         causal_start=None, num_causal=num_causal_hidden,
                                         anticausal_start=None, num_anticausal=num_anticausal_hidden,
-                                        output_or_hidden="hidden")
+                                        output_or_hidden="hidden",
+                                        debug=debug_mode)
                                          
         
         spike_in_time = \
@@ -1193,7 +1206,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                         reward_signal=reward_signal, isf2f=isf2f, isIntended=isIntended,
                                         successive_correct_cnt=correct_cnt, 
                                         coarse_fine_cut_off = stop_num*coarse_fine_ratio,
-                                        debug=1
+                                        debug=debug_mode
                                         )
         # sn_hidden.spike_in_cache.writeNewWeight(fan_in_addr, newWeight)
         sn_hidden.updateWeight(fan_in_addr=fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
@@ -1206,7 +1219,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                 anticausal_start_output=anticausal_start_output, num_anticausal_output=num_anticausal_output,
                                 num_causal_hidden=num_causal_hidden, 
                                 num_anticausal_hidden=num_anticausal_hidden,
-                                disparate_learning_on=0
+                                disparate_learning_on=0, debug_mode=debug_mode
                                 ):
         if not isIntended:
             print("Error when calling intendedUpdateRoutine(): function argument isIntended is {}!".format(isIntended))
@@ -1216,7 +1229,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             sn_intended.findSynapseGroup(instance=instance, f_handle=f_handle,
                                          causal_start=causal_start_output, num_causal=num_causal_output,
                                          anticausal_start=anticausal_start_output, num_anticausal=num_anticausal_output,
-                                         output_or_hidden="output")
+                                         output_or_hidden="output", debug=debug_mode)
         causal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_causal]
         t_in_causal = [entry["time"] for entry in in_spike_events_causal]
         oldWeight_causal = [entry["weight"] for entry in in_spike_events_causal]        
@@ -1250,7 +1263,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                     isf2f=isf2f, isIntended=isIntended,
                                     successive_correct_cnt=correct_cnt,
                                     coarse_fine_cut_off=stop_num*coarse_fine_ratio,
-                                    debug=1
+                                    debug=debug_mode
                                     )
         sn_intended.updateWeight(fan_in_addr= causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight_causal)
         if anticausal_fan_in_addr != None:
@@ -1262,7 +1275,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             sn_intended.findPreSynapticNeuron(causal_fan_in_addr, WeightRAM)
             )
         for i in range(len(PreSynapticIdx_intended[instance]["causal"])):
-            sn_hidden_causal = sn_list[instance][PreSynapticIdx_intended[instance]["causal"][i]]
+            sn_hidden_causal = sn_list[PreSynapticIdx_intended[instance]["causal"][i]]
             if supervised_hidden:
                 hiddenNeuronUpdateRoutine(sn_hidden=sn_hidden_causal, instance=instance, 
                                         reward_signal=reward_signal, isf2f=isf2f, isIntended=isIntended,
@@ -1276,7 +1289,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 sn_intended.findPreSynapticNeuron(anticausal_fan_in_addr, WeightRAM)
                 )
             for i in range(len(PreSynapticIdx_intended[instance]["anti-causal"])):
-                sn_hidden_anticausal = sn_list[instance][PreSynapticIdx_intended[instance]["anti-causal"][i]]
+                sn_hidden_anticausal = sn_list[PreSynapticIdx_intended[instance]["anti-causal"][i]]
                 if supervised_hidden:
                     hiddenNeuronUpdateRoutine(sn_hidden=sn_hidden_anticausal, instance=instance, 
                                             reward_signal=reward_signal, isf2f=isf2f, isIntended=isIntended,
@@ -1290,7 +1303,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                 correct_cnt, stop_num, coarse_fine_ratio,
                                 causal_start_output=causal_start_output, num_causal_output=num_causal_output, 
                                 anticausal_start_output=anticausal_start_output, num_anticausal_output=num_anticausal_output,
-                                ):
+                                debug_mode=debug_mode):
         if isIntended:
             print("Error when calling nonintendedUpdateRoutine(): function argument isIntended is {}!".format(isIntended))
             exit(1)
@@ -1301,7 +1314,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             sn_nonintended.findSynapseGroup(instance=instance, f_handle=f_handle,
                                          causal_start=causal_start_output, num_causal=num_causal_output,
                                          anticausal_start=anticausal_start_output, num_anticausal=num_anticausal_output,
-                                         output_or_hidden="output")
+                                         output_or_hidden="output", debug=debug_mode)
         causal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_causal]
         t_in_causal = [entry["time"] for entry in in_spike_events_causal]
         oldWeight_causal = [entry["weight"] for entry in in_spike_events_causal]        
@@ -1324,7 +1337,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                     isf2f=isf2f, isIntended=isIntended,
                                     successive_correct_cnt=correct_cnt,
                                     coarse_fine_cut_off=stop_num*coarse_fine_ratio,
-                                    debug=1
+                                    debug=debug_mode
                                     )
         sn_nonintended.updateWeight(fan_in_addr=causal_fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight_causal)            
         # if anticausal_fan_in_addr != None:
@@ -1346,7 +1359,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal = 1
                 isIntended = 1
                 isf2f = 1
-                sn_intended = sn_list[instance][desired_ff_idx]
+                sn_intended = sn_list[desired_ff_idx]
                 intendedUpdateRoutine(
                     sn_intended=sn_intended, supervised_hidden=supervised_hidden,
                     reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
@@ -1363,7 +1376,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 isf2f = 0
                 if len(non_f2f_neuron_lst) > 0:
                     for non_f2f_idx in non_f2f_neuron_lst:
-                        sn_nonintended = sn_list[instance][non_f2f_idx]
+                        sn_nonintended = sn_list[non_f2f_idx]
                         nonintendedUpdateRoutine(
                             sn_nonintended=sn_nonintended, supervised_hidden=supervised_hidden,
                             reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
@@ -1381,7 +1394,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal = 0
                 isf2f = 0
                 isIntended = 1
-                sn_intended = sn_list[instance][desired_ff_idx]
+                sn_intended = sn_list[desired_ff_idx]
                 intendedUpdateRoutine(
                     sn_intended=sn_intended, supervised_hidden=supervised_hidden,
                     reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
@@ -1396,7 +1409,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal = 0
                 isIntended = 0
                 isf2f = 1
-                sn_nonintended = sn_list[instance][f2f_neuron_idx]
+                sn_nonintended = sn_list[f2f_neuron_idx]
                 nonintendedUpdateRoutine(
                     sn_nonintended=sn_nonintended, supervised_hidden=supervised_hidden,
                     reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
@@ -1414,7 +1427,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             reward_signal = 0
             isf2f = 0
             isIntended = 1
-            sn_intended = sn_list[instance][desired_ff_idx]
+            sn_intended = sn_list[desired_ff_idx]
             intendedUpdateRoutine(
                 sn_intended=sn_intended, supervised_hidden=supervised_hidden,
                 reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
@@ -1423,9 +1436,9 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 correct_cnt=correct_cnt, stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio,
                 output_silent=1 
             )              
-
-        f_handle.write("Instance {}: no output layer neuron has fired up until the end of forward pass\n"
-        .format(instance))
+        if debug_mode:
+            f_handle.write("Instance {}: no output layer neuron has fired up until the end of forward pass\n"
+            .format(instance))
         print("Instance {}: no output layer neuron has fired up until the end of forward pass!"
         .format(instance))
 

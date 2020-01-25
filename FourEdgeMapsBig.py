@@ -89,7 +89,7 @@ def getInLatencies(in_pattern, early_latency_list, late_latency_list,
         exit(1)
     
     # InLatencies[edge_map_idx][block_idx]
-    InLatencies = [[None]*num_blocks] * num_edge_maps
+    InLatencies = [[None for pixel_idx in range(num_blocks)] for map_idx in range(num_edge_maps)]
     for map_idx in range(num_edge_maps):
         for block_idx in range(num_blocks):
             latency_late = \
@@ -185,8 +185,8 @@ def getInLatencies(in_pattern, early_latency_list, late_latency_list,
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[3][block_idx] = latency_early 
     
-
-    return (InLatencies, early_latency_list, late_latency_list)
+    InLatencies_flattened = [ x for sub_list in InLatencies for x in sub_list]
+    return (InLatencies_flattened, early_latency_list, late_latency_list)
 
 def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_bins=8):
     fig, ax = plt.subplots(figsize=(14,7))
@@ -206,7 +206,14 @@ def plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_
     ax.set_xticklabels(xticklabel_list)
     ax.legend(fontsize=15)
 
-
+def getTrainingAccuracy(moving_window, plot_on=0):
+    if None in moving_window:
+        return 0
+    else:
+        num_instances = len(moving_window)
+        correct_total = sum(moving_window)
+        accuracy = correct_total / num_instances
+        return accuracy
 #%% Parameters to tune
 ######################################################################################
 printout_dir = "sim_printouts/FourEdgeMapsBig/"
@@ -217,27 +224,28 @@ num_edge_maps = 4
 W_input = 4
 F_hidden = 2
 S_hidden = 1
-depth_hidden_per_sublocation = 4
+depth_hidden_per_sublocation = 5
 
 ## Specify common Spiking Neuron Parameters
 duration = 80
 tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 vth_input = 1
-vth_hidden = 40 + 16     # with 2-spike consideration: [(2-1) x 5 x tau_u, 2 x 5 x tau_u)
-                         # with 2-spike consideration: [(2-1) x 7 x tau_u, 2 x 7 x tau_u)
+vth_hidden = 112            # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)
+                            # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)
 
-vth_output = 70          # with 4-spike consideration: [(4-1) x 5 x tau_u, 4 x 5 x tau_u)  
-                         # with 4-spike consideration: [(4-1) x 7 x tau_u, 4 x 7 x tau_u)  
+vth_output = 235             # with 6-spike consideration: [(6-1) x 5 x tau_u, 6 x 5 x tau_u)  
+                            # with 6-spike consideration: [(6-1) x 7 x tau_u, 6 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
 separation_window = 10
-stop_num = 100
+stop_num = 150
 coarse_fine_ratio=0.05
+size_moving_window = 100    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 10             # number of training instances per epoch
+num_instances = 2000             # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
@@ -256,18 +264,10 @@ else:
     f_handle = None
 
 
-## Initialize Connectivity
-input_connectivity, hidden_connectivity, output_connectivity, writer = \
-    NetworkConnectivity.initializeNetWorkConnectivity(
-        num_categories=num_categories, num_edge_maps=num_edge_maps, W_input=W_input,
-        F_hidden=F_hidden, S_hidden=S_hidden, 
-        depth_hidden_per_sublocation=depth_hidden_per_sublocation,
-        sheet_dir=sheet_dir
-    )
-
-num_input_neurons = len(input_connectivity)
-num_hidden_neurons = len(hidden_connectivity)
-num_output_neurons = len(output_connectivity)
+W_hidden = int((W_input-F_hidden) / S_hidden) + 1
+num_input_neurons = W_input**2 * num_edge_maps 
+num_hidden_neurons = W_hidden**2 * depth_hidden_per_sublocation
+num_output_neurons = num_categories
 num_neurons = num_input_neurons + num_hidden_neurons + num_output_neurons
 
 inital_weight_input = [10] * num_input_neurons 
@@ -277,6 +277,18 @@ weight_vector = \
     [
         *inital_weight_input, *initial_weight_hidden, *initial_weight_output
     ]
+
+## Initialize Connectivity
+input_connectivity, hidden_connectivity, output_connectivity \
+, ConnectivityTable, WeightRAM, PotentialRAM, writer = \
+    NetworkConnectivity.initializeNetWorkConnectivity(
+        num_categories=num_categories, num_edge_maps=num_edge_maps, W_input=W_input,
+        F_hidden=F_hidden, S_hidden=S_hidden, 
+        depth_hidden_per_sublocation=depth_hidden_per_sublocation, weight_vector=weight_vector,
+        sheet_dir=sheet_dir
+    )
+
+
 ######################################################################################
 
 #%% Generate Input & Output patterns 
@@ -351,52 +363,6 @@ if len(desired_ff_neuron) != num_instances:
 
 ######################################################################################
 
-#%% Instantiate ConnectivityTable, WeightRAM and PotentialRAM
-######################################################################################
-## Initialize Connectivity Table -- consolidate input, hidden and output connectivity 
-ConnectivityTable = SNN.ConnectivityInfo(num_neurons=num_neurons)
-
-for i in range(num_input_neurons):
-    neuron_idx = i
-    ConnectivityTable.layer_num[neuron_idx] = 0
-    ConnectivityTable.fan_in_neuron_idx[neuron_idx] = input_connectivity[i]["fan_in_neuron_indices"]
-    ConnectivityTable.fan_in_synapse_addr[neuron_idx] = input_connectivity[i]["fan_in_synapse_addrs"]
-    ConnectivityTable.fan_out_neuron_idx[neuron_idx] = input_connectivity[i]["fan_out_neuron_indices"]
-    ConnectivityTable.fan_out_synapse_addr[neuron_idx] = input_connectivity[i]["fan_out_synapse_indices"]
-
-for i in range(num_hidden_neurons):
-    neuron_idx = num_input_neurons + i
-    ConnectivityTable.layer_num[neuron_idx] = 1
-    ConnectivityTable.fan_in_neuron_idx[neuron_idx] = hidden_connectivity[i]["fan_in_neuron_indices"]
-    ConnectivityTable.fan_in_synapse_addr[neuron_idx] = hidden_connectivity[i]["fan_in_synapse_addrs"]
-    ConnectivityTable.fan_out_neuron_idx[neuron_idx] = hidden_connectivity[i]["fan_out_neuron_indices"]
-    ConnectivityTable.fan_out_synapse_addr[neuron_idx] = hidden_connectivity[i]["fan_out_synapse_indices"]
-
-for i in range(num_output_neurons):
-    neuron_idx = num_input_neurons + num_hidden_neurons + i
-    ConnectivityTable.layer_num[neuron_idx] = 2
-    ConnectivityTable.fan_in_neuron_idx[neuron_idx] = output_connectivity[i]["fan_in_neuron_indices"]
-    ConnectivityTable.fan_in_synapse_addr[neuron_idx] = output_connectivity[i]["fan_in_synapse_addrs"]
-    ConnectivityTable.fan_out_neuron_idx[neuron_idx] = output_connectivity[i]["fan_out_neuron_indices"]
-    ConnectivityTable.fan_out_synapse_addr[neuron_idx] = output_connectivity[i]["fan_out_synapse_indices"]
-
-
-## Initialize WeightRAM
-num_synapses = output_connectivity[-1]["fan_in_synapse_addrs"][-1] + 1 
-WeightRAM = SNN.WeightRAM(num_synapses=num_synapses)
-for synapse_addr in range(num_synapses):
-    post_neuron_idx_WRAM, _ = index_2d(ConnectivityTable.fan_in_synapse_addr, synapse_addr)
-    WeightRAM.post_neuron_idx[synapse_addr] = post_neuron_idx_WRAM
-    WeightRAM.weight[synapse_addr] = weight_vector[synapse_addr]
-    if synapse_addr >= num_input_neurons:
-        pre_neuron_idx_WRAM, _ = index_2d(ConnectivityTable.fan_out_synapse_addr, synapse_addr)
-        WeightRAM.pre_neuron_idx[synapse_addr] = pre_neuron_idx_WRAM
-
-## Initialize PotentialRAM
-PotentialRAM = SNN.PotentialRAM(num_neurons=num_neurons)
-PotentialRAM.fan_out_synapse_addr = ConnectivityTable.fan_out_synapse_addr
-######################################################################################
-
 
 #%% Instantiate a list of SpikingNeuron objects
 ######################################################################################
@@ -405,9 +371,9 @@ for neuron_idx in range(num_neurons):
     layer_idx = ConnectivityTable.layer_num[neuron_idx]
     if layer_idx == 0:
         sn = SNN.SpikingNeuron( layer_idx=layer_idx,
-                                neuron_idx=i, 
-                                fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
-                                fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
+                                neuron_idx=neuron_idx, 
+                                fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
+                                fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
                                 depth_causal = 1,
                                 depth_anticausal = 0,
                                 tau_u=tau_u,
@@ -418,15 +384,15 @@ for neuron_idx in range(num_neurons):
                                 supervised=0
                                 )
     elif layer_idx == 1:
-        depth_causal = 2
-        depth_anticausal = 14
+        depth_causal = 4
+        depth_anticausal = 4
         if supervised_hidden:
             training_on = 1
             supervised = 1
         sn = SNN.SpikingNeuron( layer_idx=layer_idx,
-                                neuron_idx=i, 
-                                fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
-                                fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
+                                neuron_idx=neuron_idx, 
+                                fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
+                                fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
                                 depth_causal = depth_causal,
                                 depth_anticausal = depth_anticausal,
                                 tau_u=tau_u,
@@ -438,15 +404,15 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        depth_causal = 2
-        depth_anticausal = 6
+        depth_causal = 6
+        depth_anticausal = 30
         if supervised_hidden:
             training_on = 1
             supervised = 1
         sn = SNN.SpikingNeuron( layer_idx=layer_idx,
-                                neuron_idx=i, 
-                                fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[i],
-                                fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[i],
+                                neuron_idx=neuron_idx, 
+                                fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
+                                fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
                                 depth_causal = depth_causal,
                                 depth_anticausal = depth_anticausal,
                                 tau_u=tau_u,
@@ -506,6 +472,9 @@ output_neuron_fire_info =   [
 inference_correct =     [    
                             None for instance in range(num_instances) 
                         ]   # num_instances
+
+moving_window = [None] * size_moving_window
+accuracy_during_training = [None] * num_instances 
 #%% Simulation Loop
 ######################################################################################
 correct_cnt = 0
@@ -530,7 +499,7 @@ PreSynapticIdx_nonintended = \
 ## Loop instances
 for instance in range(num_instances):
     if debug_mode:
-        f_handle.write("---------------Instance {} {} -----------------\n".format(instance,stimulus_time_vector[instance]["in_pattern"]))
+        f_handle.write("---------------Instance {} \"{}\" -----------------\n".format(instance,stimulus_time_vector[instance]["in_pattern"]))
     
     ## Forward Pass
     for sim_point in range(0, sn.duration, sn.dt):
@@ -549,9 +518,9 @@ for instance in range(num_instances):
             sn_list[i].accumulate(sim_point=sim_point, 
                                     spike_in_info=spike_info[instance][sim_point], 
                                     WeightRAM_inst=WeightRAM,
-                                    debug_mode=debug_mode,
                                     instance=instance,
-                                    f_handle=f_handle
+                                    f_handle=f_handle,
+                                    debug_mode=debug_mode
                                     )                                            
             # upadate the current potential to PotentialRAM
             PotentialRAM.potential[i] = sn_list[i].v[sim_point]
@@ -624,9 +593,20 @@ for instance in range(num_instances):
                     f2f_neuron_idx=f2f_neuron_idx,
                     WeightRAM=WeightRAM, 
                     stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio,
-                    correct_cnt=correct_cnt
+                    correct_cnt=correct_cnt,
+                    debug_mode=debug_mode
     )
-        
+    
+    ## record training accuracy after each training instance
+    if instance == 0:
+        moving_window[0] = inference_correct[instance]
+    elif instance > 0:    
+        moving_window = \
+            [inference_correct[instance]] + moving_window[0:-1] 
+    
+    accuracy_during_training[instance] = \
+        getTrainingAccuracy(moving_window)
+
     if correct_cnt > max_correct_cnt:
         max_correct_cnt = correct_cnt
     if debug_mode:
@@ -634,7 +614,7 @@ for instance in range(num_instances):
         f_handle.write("-------------------------------------------------\n")
 
     if correct_cnt == stop_num and (supervised_hidden or supervised_output):
-        print("Supervised Training stops at Instance {} because successive correct count has reached {}"
+        print("Supervised Training at step {} reached {} successive correct inferences"
                 .format(instance, correct_cnt))
         break
     
@@ -646,11 +626,11 @@ for instance in range(num_instances):
 if debug_mode:
     f_handle.write("Maximum successive correct count:{}\n".format(max_correct_cnt))
 
-print("inference_correct list = \n{}\n".format(inference_correct))
+# print("inference_correct list = \n{}\n".format(inference_correct))
+print("moving accuracy = \n")
+print(*("{0:4.3f}, ".format(k) for k in accuracy_during_training if k != None))
 print("Supervised Training stops at Instance {}"
         .format(instance))
-
-
 #%% Dump initial weight vector and final weightRAM
 if debug_mode:
     f_handle.write("***************************Weight Change*********************\n")
@@ -661,9 +641,9 @@ if debug_mode:
                     .format(synapse_addr, weight_vector[synapse_addr], WeightRAM.weight[synapse_addr]))
     f_handle.write("************************************************************\n")
     f_handle.close()
+
 print("Maximum successive correct count:{}\n".format(max_correct_cnt))
 print("End of Program!")
-            
 
 #%% 
 if plot_InLatency:

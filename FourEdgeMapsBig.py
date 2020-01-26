@@ -224,7 +224,7 @@ num_edge_maps = 4
 W_input = 4
 F_hidden = 2
 S_hidden = 1
-depth_hidden_per_sublocation = 5
+depth_hidden_per_sublocation = 4
 
 ## Specify common Spiking Neuron Parameters
 duration = 80
@@ -234,14 +234,15 @@ vth_input = 1
 vth_hidden = 112            # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)
                             # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)
 
-vth_output = 235             # with 6-spike consideration: [(6-1) x 5 x tau_u, 6 x 5 x tau_u)  
+vth_output = 235            # with 6-spike consideration: [(6-1) x 5 x tau_u, 6 x 5 x tau_u)  
                             # with 6-spike consideration: [(6-1) x 7 x tau_u, 6 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
 separation_window = 10
 stop_num = 120
-coarse_fine_ratio=0.05
+
+accuracy_th = 0.85          # the coarse/fine cutoff for weight update based on moving accuracy
 size_moving_window = 100    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
@@ -579,6 +580,10 @@ for instance in range(num_instances):
         f2f_neuron_idx = None
         non_f2f_neuron_lst = []
     
+    if instance == 0:
+        moving_accuracy = 0
+    else:
+        moving_accuracy = accuracy_during_training[instance-1]
     correct_cnt = SNN.combined_RSTDP_BRRC(
                     sn_list=sn_list, instance=instance, inference_correct=inference_correct,
                     num_fired_output=len(output_neuron_fire_info[instance]["neuron_idx"]),
@@ -592,7 +597,7 @@ for instance in range(num_instances):
                     non_f2f_neuron_lst=non_f2f_neuron_lst, 
                     f2f_neuron_idx=f2f_neuron_idx,
                     WeightRAM=WeightRAM, 
-                    stop_num=stop_num, coarse_fine_ratio=coarse_fine_ratio,
+                    moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
                     correct_cnt=correct_cnt,
                     debug_mode=debug_mode
     )

@@ -814,7 +814,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     reward_signal, isf2f, isIntended,
                     successive_correct_cnt, coarse_fine_cut_off,
                     A_causal_coarse=2, A_causal_fine=1, tau_causal=50,
-                    A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=50,
+                    A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=30,
                     max_weight=7, min_weight=-8, deltaWeight_default=2,
                     debug=0): 
         
@@ -1155,7 +1155,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         desired_ff_idx, min_fire_time, 
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
                         WeightRAM, stop_num, coarse_fine_ratio, correct_cnt,
-                        causal_start_output=4, num_causal_output=3, anticausal_start_output=28, num_anticausal_output=3,
+                        causal_start_output=4, num_causal_output=3, anticausal_start_output=29, num_anticausal_output=2,
                         num_causal_hidden=3, num_anticausal_hidden=3, debug_mode=0                       
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])

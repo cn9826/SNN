@@ -240,7 +240,7 @@ vth_output = 235             # with 6-spike consideration: [(6-1) x 5 x tau_u, 6
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
 separation_window = 10
-stop_num = 150
+stop_num = 120
 coarse_fine_ratio=0.05
 size_moving_window = 100    # the size of moving window that dynamically calculates inference accuracy during training
 

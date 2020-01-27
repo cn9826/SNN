@@ -82,7 +82,7 @@ def getInLatencies(in_pattern, early_latency_list, late_latency_list,
                     num_edge_maps=4, num_blocks=16):
 
     # num_in_neurons = num_edge_maps * num_blocks
-    in_pattern_list = ["9", "8", "6", "3"]
+    in_pattern_list = ["0", "1", "2", "3", "6", "8", "9"]
     num_in_neurons = num_edge_maps * num_blocks
     if not in_pattern in in_pattern_list:
         print("Error when calling getInLatencies: illegal specification of \"in_pattern\"")
@@ -97,7 +97,61 @@ def getInLatencies(in_pattern, early_latency_list, late_latency_list,
             InLatencies[map_idx][block_idx] = latency_late
             late_latency_list.append(latency_late)
     
-    if in_pattern == "9":
+    if in_pattern == "0":
+        # feature map 0: '--'
+        for block_idx in [1, 2, 13, 14]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[0][block_idx] = latency_early 
+        # feature map 1: '/'
+        for block_idx in [1, 14]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[1][block_idx] = latency_early 
+        # feature map 2: '|'
+        for block_idx in [4, 8, 7, 11]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[2][block_idx] = latency_early 
+        # feature map 3: '\'
+        for block_idx in [2, 13]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[3][block_idx] = latency_early 
+
+    elif in_pattern == "1":
+        # feature map 0: '--'
+        # feature map 1: '/'
+        # feature map 2: '|'
+        for block_idx in [1, 2, 5, 6, 9, 10, 13, 14]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[2][block_idx] = latency_early 
+        # feature map 3: '\'
+
+    elif in_pattern == "2":
+        # feature map 0: '--'
+        for block_idx in [13, 14]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[0][block_idx] = latency_early 
+        # feature map 1: '/'
+        for block_idx in [1, 6, 9]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[1][block_idx] = latency_early 
+        # feature map 2: '|'
+        for block_idx in []:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[2][block_idx] = latency_early 
+        # feature map 3: '\'
+        for block_idx in [2]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[3][block_idx] = latency_early 
+
+    elif in_pattern == "9":
         # feature map 0: '--'
         for block_idx in [1, 2]:
             latency_early = \
@@ -219,12 +273,12 @@ def getTrainingAccuracy(moving_window, plot_on=0):
 printout_dir = "sim_printouts/FourEdgeMapsBig/"
 sheet_dir = "sim_printouts/FourEdgeMapsBig/ConnectivityTable.xlsx"
 
-num_categories = 4
+num_categories = 7
 num_edge_maps = 4
 W_input = 4
 F_hidden = 2
 S_hidden = 1
-depth_hidden_per_sublocation = 4
+depth_hidden_per_sublocation = 7
 
 ## Specify common Spiking Neuron Parameters
 duration = 80
@@ -234,8 +288,8 @@ vth_input = 1
 vth_hidden = 112            # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)
                             # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)
 
-vth_output = 235            # with 6-spike consideration: [(6-1) x 5 x tau_u, 6 x 5 x tau_u)  
-                            # with 6-spike consideration: [(6-1) x 7 x tau_u, 6 x 7 x tau_u)  
+vth_output = 350            # with 9-spike consideration: [(9-1) x 5 x tau_u, 9 x 5 x tau_u)  
+                            # with 9-spike consideration: [(9-1) x 7 x tau_u, 9 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
@@ -300,13 +354,16 @@ std_early = int(2*tau_u/3)
 mean_late = 4*2*tau_u - 2*tau_u
 std_late = int(2*tau_u/3)
 
-input_patterns = ("3", "6", "8", "9")
+input_patterns = ("0", "1", "2", "3", "6", "8", "9")
 output_pattern = \
     {
-        "3"     :   num_input_neurons + num_hidden_neurons,
-        "6"     :   num_input_neurons + num_hidden_neurons + 1,
-        "8"     :   num_input_neurons + num_hidden_neurons + 2,
-        "9"     :   num_input_neurons + num_hidden_neurons + 3
+        "0"     :   num_input_neurons + num_hidden_neurons,
+        "1"     :   num_input_neurons + num_hidden_neurons + 1,
+        "2"     :   num_input_neurons + num_hidden_neurons + 2,
+        "3"     :   num_input_neurons + num_hidden_neurons + 3,
+        "6"     :   num_input_neurons + num_hidden_neurons + 4,
+        "8"     :   num_input_neurons + num_hidden_neurons + 5,
+        "9"     :   num_input_neurons + num_hidden_neurons + 6
     }
 
 ## Create stimulus spikes at the inuput layer (layer 0)
@@ -405,8 +462,8 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        depth_causal = 6
-        depth_anticausal = 30
+        depth_causal = 9
+        depth_anticausal = 54
         if supervised_hidden:
             training_on = 1
             supervised = 1

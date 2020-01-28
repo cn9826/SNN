@@ -273,34 +273,34 @@ def getTrainingAccuracy(moving_window, plot_on=0):
 printout_dir = "sim_printouts/FourEdgeMapsBig/"
 sheet_dir = "sim_printouts/FourEdgeMapsBig/ConnectivityTable.xlsx"
 
-num_categories = 7
+num_categories = 4
 num_edge_maps = 4
 W_input = 4
 F_hidden = 2
 S_hidden = 1
-depth_hidden_per_sublocation = 7
+depth_hidden_per_sublocation = 4
 
 ## Specify common Spiking Neuron Parameters
-duration = 80
+duration = 100
 tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 vth_input = 1
 vth_hidden = 112            # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)
                             # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)
 
-vth_output = 350            # with 9-spike consideration: [(9-1) x 5 x tau_u, 9 x 5 x tau_u)  
-                            # with 9-spike consideration: [(9-1) x 7 x tau_u, 9 x 7 x tau_u)  
+vth_output = 235            # with 6-spike consideration: [(6-1) x 5 x tau_u, 6 x 5 x tau_u)  
+                            # with 6-spike consideration: [(6-1) x 7 x tau_u, 6 x 7 x tau_u)  
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
 separation_window = 10
 stop_num = 120
 
-accuracy_th = 0.85          # the coarse/fine cutoff for weight update based on moving accuracy
+accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on moving accuracy
 size_moving_window = 100    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 2000             # number of training instances per epoch
+num_instances = 10             # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
@@ -354,16 +354,13 @@ std_early = int(2*tau_u/3)
 mean_late = 4*2*tau_u - 2*tau_u
 std_late = int(2*tau_u/3)
 
-input_patterns = ("0", "1", "2", "3", "6", "8", "9")
+input_patterns = ("3", "6", "8", "9")
 output_pattern = \
     {
-        "0"     :   num_input_neurons + num_hidden_neurons,
-        "1"     :   num_input_neurons + num_hidden_neurons + 1,
-        "2"     :   num_input_neurons + num_hidden_neurons + 2,
-        "3"     :   num_input_neurons + num_hidden_neurons + 3,
-        "6"     :   num_input_neurons + num_hidden_neurons + 4,
-        "8"     :   num_input_neurons + num_hidden_neurons + 5,
-        "9"     :   num_input_neurons + num_hidden_neurons + 6
+        "3"     :   num_input_neurons + num_hidden_neurons,
+        "6"     :   num_input_neurons + num_hidden_neurons + 1,
+        "8"     :   num_input_neurons + num_hidden_neurons + 2,
+        "9"     :   num_input_neurons + num_hidden_neurons + 3
     }
 
 ## Create stimulus spikes at the inuput layer (layer 0)
@@ -462,8 +459,8 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        depth_causal = 9
-        depth_anticausal = 54
+        depth_causal = 7
+        depth_anticausal = 12 
         if supervised_hidden:
             training_on = 1
             supervised = 1
@@ -503,6 +500,7 @@ spike_info = [
                 [
                     {    
                         "fired_synapse_addr": [],
+                        "sublocation_idx"   : [],
                         "time"              : None
                     }
                     for step in range(0, sn.duration, sn.dt)
@@ -513,8 +511,9 @@ spike_info = [
 ## Initialize statistics
 hidden_neuron_fire_info =   [
                                 {
-                                    "neuron_idx":   [],
-                                    "time"      :   []
+                                    "neuron_idx"        :   [],
+                                    "sublocation_idx"   :   [],
+                                    "time"              :   []
                                 } 
                                 for instance in range(num_instances)
                             ]   
@@ -589,16 +588,25 @@ for instance in range(num_instances):
                     if (len(sn_list[i].fan_out_synapse_addr) == 1): # if single fan-out
                         fired_synapse_list[instance][sim_point].append(val)
                         spike_info[instance][sim_point]["fired_synapse_addr"].append(val)
+                        if sn_list[i].layer_idx == 1:
+                            spike_info[instance][sim_point]["sublocation_idx"].append(
+                            hidden_connectivity[sn_list[i].neuron_idx - num_input_neurons]["sublocation_idx"])
+                    
                     else:   # if multiple fan-out synpases
                         for key,val in enumerate(sn_list[i].fan_out_synapse_addr):
                             fired_synapse_list[instance][sim_point].append(val)
                             spike_info[instance][sim_point]["fired_synapse_addr"].append(val)
-                    
+                            if sn_list[i].layer_idx == 1:
+                                spike_info[instance][sim_point]["sublocation_idx"].append(
+                                hidden_connectivity[sn_list[i].neuron_idx - num_input_neurons]["sublocation_idx"])
+                        
                     fired_neuron_list[instance][sim_point].append(sn_list[i].neuron_idx)
 
                     # if the fired neuron at this sim_point is in the hidden layer
                     if (sn_list[i].layer_idx == 1):
                         hidden_neuron_fire_info[instance]["neuron_idx"].append(sn_list[i].neuron_idx)
+                        hidden_neuron_fire_info[instance]["sublocation_idx"].append(
+                            hidden_connectivity[sn_list[i].neuron_idx - num_input_neurons]["sublocation_idx"])
                         hidden_neuron_fire_info[instance]["time"].append(sim_point)
 
                     # if the fired neuron at this sim_point is in the output layer

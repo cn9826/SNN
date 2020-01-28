@@ -188,18 +188,36 @@ class SpikeIncache_Output:
 
     def writeSpikeInInfo(self, fired_synapse_addr, sublocation_idx, time, weight):
         # at the beginning of recording location-specific in-spike events 
-        if sublocation_buffer_ptr == 0:
-            # record the sublocation_idx if it has not been recorded before
+        if self.sublocation_buffer_ptr == 0:
+            # record the sublocation_idx in the sublocation_buffer if it has not been recorded before
             if not sublocation_idx in self.sublocation_buffer:
-                                
+                self.writeSublocationBuffer(sublocation_idx)
+                # then record the in-spike event in the mem
+                self.mem[0][self.write_ptr[0]]["fired_synapse_addr"] = fired_synapse_addr 
+                self.mem[0][self.write_ptr[0]]["sublocation_idx"] = sublocation_idx 
+                self.mem[0][self.write_ptr[0]]["causal_tag"] = 1 
+                self.mem[0][self.write_ptr[0]]["weight"] = weight 
+                self.mem[0][self.write_ptr[0]]["time"] = time
+                self.write_ptr[0] += 1 
+        
+        else:
+            # check sublocation_buffer to see if the same sublocation has been recorded before 
+            # whether it had been recorded during this training isntance or previous instances
+            if sublocation_idx in self.sublocation_buffer:
+                # get the index of the recorded sublocaiton_idx in the sublocaiton_buffer
+                buffer_idx = self.sublocation_buffer.index(sublocation_idx)
+                # buffer_idx < sublocation_buffer_ptr means 
+                if buffer_idx < self.sublocation_buffer_ptr:
+
 
     def writeSublocationBuffer(self, sublocation_idx):
-        if self.sublocation_buffer_ptr < self.num_sublocations
+        if self.sublocation_buffer_ptr < self.num_sublocations:
             self.sublocation_buffer[self.sublocation_buffer_ptr] = sublocation_idx
             self.sublocation_buffer_ptr += 1
 
     def clearMem(self):
         self.write_ptr = 0
+        self.sublocation_buffer_ptr = 0
         self.fired = 0
         self.mem =  [
                         {

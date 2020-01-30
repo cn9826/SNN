@@ -281,11 +281,11 @@ S_hidden = 1
 depth_hidden_per_sublocation = 4
 
 ## Specify common Spiking Neuron Parameters
-duration = 100
+duration = 80
 tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 vth_input = 1
-vth_hidden = 112            # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)
+vth_hidden = 112             # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)
                             # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)
 
 vth_output = 235            # with 6-spike consideration: [(6-1) x 5 x tau_u, 6 x 5 x tau_u)  
@@ -300,7 +300,7 @@ accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on 
 size_moving_window = 100    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 10             # number of training instances per epoch
+num_instances = 2000             # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
@@ -427,6 +427,7 @@ for neuron_idx in range(num_neurons):
     if layer_idx == 0:
         sn = SNN.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx, 
+                                sublocation_idx=None,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
                                 fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
                                 depth_causal = 1,
@@ -446,6 +447,7 @@ for neuron_idx in range(num_neurons):
             supervised = 1
         sn = SNN.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx, 
+                                sublocation_idx=hidden_connectivity[neuron_idx - num_input_neurons]["sublocation_idx"],
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
                                 fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
                                 depth_causal = depth_causal,
@@ -459,17 +461,20 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        depth_causal = 7
-        depth_anticausal = 12 
+        num_sublocations = 4
+        depth_causal_per_subloc = 1
+        depth_anticausal_per_subloc = 1 
         if supervised_hidden:
             training_on = 1
             supervised = 1
         sn = SNN.SpikingNeuron( layer_idx=layer_idx,
-                                neuron_idx=neuron_idx, 
+                                neuron_idx=neuron_idx,
+                                sublocation_idx=None, 
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
                                 fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
-                                depth_causal = depth_causal,
-                                depth_anticausal = depth_anticausal,
+                                depth_causal = depth_causal_per_subloc,
+                                depth_anticausal = depth_anticausal_per_subloc,
+                                num_sublocations = num_sublocations,
                                 tau_u=tau_u,
                                 tau_v=tau_v,
                                 threshold=vth_output,
@@ -482,12 +487,12 @@ for neuron_idx in range(num_neurons):
 
 #%% Inter-neuron data initialization 
 ######################################################################################
-fired_synapse_list =    [
-                            [
-                                [] for step in range(0, sn.duration, sn.dt)
-                            ]
-                            for instance in range(num_instances)
-                        ]   # num_instances x num_timesteps x num_fired_synapses
+# fired_synapse_list =    [
+#                             [
+#                                 [] for step in range(0, sn.duration, sn.dt)
+#                             ]
+#                             for instance in range(num_instances)
+#                         ]   # num_instances x num_timesteps x num_fired_synapses
 
 fired_neuron_list =    [
                             [
@@ -496,17 +501,18 @@ fired_neuron_list =    [
                             for instance in range(num_instances)
                         ]   # num_instances x num_timesteps x num_fired_neurons
 
-spike_info = [
-                [
-                    {    
-                        "fired_synapse_addr": [],
-                        "sublocation_idx"   : [],
-                        "time"              : None
-                    }
-                    for step in range(0, sn.duration, sn.dt)
-                ] for instance in range(num_instances)
-             ]            
-             # a list of dictionaries sorted by time steps
+# spike_info = [
+#                 [
+#                     {    
+#                         "fired_synapse_addr": [],
+#                         "sublocation_idx"   : [],
+#                         "time"              : None
+#                     }
+#                     for step in range(0, sn.duration, sn.dt)
+#                 ] for instance in range(num_instances)
+#              ]            
+#              # a list of dictionaries sorted by time steps
+
 
 ## Initialize statistics
 hidden_neuron_fire_info =   [
@@ -555,6 +561,13 @@ PreSynapticIdx_nonintended = \
     
 ## Loop instances
 for instance in range(num_instances):
+    # a list of spike_info_entry that contains "fired_synapse_addr", "sublocation_idx" and "time"
+    spike_info = \
+        [
+            []
+            for step in range(0, sn.duration, sn.dt)
+        ]
+
     if debug_mode:
         f_handle.write("---------------Instance {} \"{}\" -----------------\n".format(instance,stimulus_time_vector[instance]["in_pattern"]))
     
@@ -562,18 +575,19 @@ for instance in range(num_instances):
     for sim_point in range(0, sn.duration, sn.dt):
         # first check if any input synpase fires at this time step
         if sim_point in stimulus_time_vector[instance]["in_latency"]:
-            fired_synapse_list[instance][sim_point].extend(
-                index_duplicate(stimulus_time_vector[instance]["in_latency"], sim_point)
-            )
-            spike_info[instance][sim_point]["fired_synapse_addr"].extend(
-                index_duplicate(stimulus_time_vector[instance]["in_latency"], sim_point)
-            )
-
-        spike_info[instance][sim_point]["time"] = sim_point
+            synapse_indices = index_duplicate(stimulus_time_vector[instance]["in_latency"], sim_point)
+            for synapse_index in synapse_indices:
+                spike_info_entry = \
+                    {
+                        "fired_synapse_addr"    :   synapse_index,
+                        "sublocation_idx"       :   None,
+                        "time"                  :   sim_point
+                    }
+                spike_info[sim_point].append(spike_info_entry)
         
         for i in range(num_neurons):
             sn_list[i].accumulate(sim_point=sim_point, 
-                                    spike_in_info=spike_info[instance][sim_point], 
+                                    spike_in_info=spike_info[sim_point], 
                                     WeightRAM_inst=WeightRAM,
                                     instance=instance,
                                     f_handle=f_handle,
@@ -583,37 +597,26 @@ for instance in range(num_instances):
             PotentialRAM.potential[i] = sn_list[i].v[sim_point]
             
             # update the list of synapses that fired at this sim_point
-            if (sn_list[i].fire_cnt != -1):
-                if (sn_list[i].spike_out_info[sn_list[i].fire_cnt]["time"] == sim_point):
-                    if (len(sn_list[i].fan_out_synapse_addr) == 1): # if single fan-out
-                        fired_synapse_list[instance][sim_point].append(val)
-                        spike_info[instance][sim_point]["fired_synapse_addr"].append(val)
-                        if sn_list[i].layer_idx == 1:
-                            spike_info[instance][sim_point]["sublocation_idx"].append(
-                            hidden_connectivity[sn_list[i].neuron_idx - num_input_neurons]["sublocation_idx"])
-                    
-                    else:   # if multiple fan-out synpases
-                        for key,val in enumerate(sn_list[i].fan_out_synapse_addr):
-                            fired_synapse_list[instance][sim_point].append(val)
-                            spike_info[instance][sim_point]["fired_synapse_addr"].append(val)
-                            if sn_list[i].layer_idx == 1:
-                                spike_info[instance][sim_point]["sublocation_idx"].append(
-                                hidden_connectivity[sn_list[i].neuron_idx - num_input_neurons]["sublocation_idx"])
-                        
-                    fired_neuron_list[instance][sim_point].append(sn_list[i].neuron_idx)
+            if (sn_list[i].fire_cnt != -1 and sn_list[i].spike_out_info[0]["time"] == sim_point):
+                spike_info[sim_point].extend(sn_list[i].spike_out_info)        
+                fired_neuron_list[instance][sim_point].append(sn_list[i].neuron_idx)
 
-                    # if the fired neuron at this sim_point is in the hidden layer
-                    if (sn_list[i].layer_idx == 1):
-                        hidden_neuron_fire_info[instance]["neuron_idx"].append(sn_list[i].neuron_idx)
-                        hidden_neuron_fire_info[instance]["sublocation_idx"].append(
-                            hidden_connectivity[sn_list[i].neuron_idx - num_input_neurons]["sublocation_idx"])
-                        hidden_neuron_fire_info[instance]["time"].append(sim_point)
+                # if the fired neuron at this sim_point is in the hidden layer
+                if (sn_list[i].layer_idx == 1):
+                    hidden_neuron_fire_info[instance]["neuron_idx"].append(sn_list[i].neuron_idx)
+                    hidden_neuron_fire_info[instance]["sublocation_idx"].append(
+                        hidden_connectivity[sn_list[i].neuron_idx - num_input_neurons]["sublocation_idx"])
+                    hidden_neuron_fire_info[instance]["time"].append(sim_point)
 
-                    # if the fired neuron at this sim_point is in the output layer
-                    if (sn_list[i].layer_idx == 2):
-                        output_neuron_fire_info[instance]["neuron_idx"].append(sn_list[i].neuron_idx)
-                        output_neuron_fire_info[instance]["time"].append(sim_point)
+                # if the fired neuron at this sim_point is in the output layer
+                if (sn_list[i].layer_idx == 2):
+                    output_neuron_fire_info[instance]["neuron_idx"].append(sn_list[i].neuron_idx)
+                    output_neuron_fire_info[instance]["time"].append(sim_point)
     ## End of one Forward Pass
+    
+    # copy the sublocation_buffer to sublocation_buffer_prev in the output layer neuron's spike_in_cache
+    for output_neuron_idx in range(num_input_neurons + num_hidden_neurons, num_neurons):
+        sn_list[output_neuron_idx].spike_in_cache.latchSublocationBufferPrev()
 
     # At the end of the Forward Pass, inspect output-layer firing info
     if len(output_neuron_fire_info[instance]["neuron_idx"]) > 0:
@@ -666,7 +669,7 @@ for instance in range(num_instances):
                     correct_cnt=correct_cnt,
                     debug_mode=debug_mode
     )
-    
+        
     ## record training accuracy after each training instance
     if instance == 0:
         moving_window[0] = inference_correct[instance]

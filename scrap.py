@@ -268,8 +268,11 @@ import matplotlib.pyplot as plt
 #     print("s = {}\t\t deltaWeight = {}".format(s, deltaWeight))
 
 #%%
-list1= [0, 1, 2, 3]
-list2 = [x+4 for x in list1]
+list_2d = \
+    [
+        [1, 2, 3], [4, 5, 6], [7, 8, 9]
+    ]
+list_1d = [ x for sub_list in list_2d for x in sub_list]
+print(list_1d[0:-1])
 
-for (x1, x2) in (list1, list2):
-    print("x1 : {}\t x2: {}".format(x1, x2))
+lst1 = [2, None, 3, None]

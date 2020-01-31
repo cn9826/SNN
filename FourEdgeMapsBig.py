@@ -270,15 +270,15 @@ def getTrainingAccuracy(moving_window, plot_on=0):
         return accuracy
 #%% Parameters to tune
 ######################################################################################
-printout_dir = "sim_printouts/FourEdgeMapsBig/"
-sheet_dir = "sim_printouts/FourEdgeMapsBig/ConnectivityTable.xlsx"
+printout_dir = "sim_printouts/FourEdgeMapsBigMoreDigits/"
+sheet_dir = "sim_printouts/FourEdgeMapsBigMoreDigits/ConnectivityTable.xlsx"
 
-num_categories = 4
+num_categories = 7
 num_edge_maps = 4
 W_input = 4
 F_hidden = 2
 S_hidden = 1
-depth_hidden_per_sublocation = 4
+depth_hidden_per_sublocation = 7
 
 ## Specify common Spiking Neuron Parameters
 duration = 80
@@ -354,13 +354,16 @@ std_early = int(2*tau_u/3)
 mean_late = 4*2*tau_u - 2*tau_u
 std_late = int(2*tau_u/3)
 
-input_patterns = ("3", "6", "8", "9")
+input_patterns = ("0", "1", "2", "3", "6", "8", "9")
 output_pattern = \
     {
-        "3"     :   num_input_neurons + num_hidden_neurons,
-        "6"     :   num_input_neurons + num_hidden_neurons + 1,
-        "8"     :   num_input_neurons + num_hidden_neurons + 2,
-        "9"     :   num_input_neurons + num_hidden_neurons + 3
+        "0"     :   num_input_neurons + num_hidden_neurons,
+        "1"     :   num_input_neurons + num_hidden_neurons + 1,
+        "2"     :   num_input_neurons + num_hidden_neurons + 2,
+        "3"     :   num_input_neurons + num_hidden_neurons + 3,
+        "6"     :   num_input_neurons + num_hidden_neurons + 4,
+        "8"     :   num_input_neurons + num_hidden_neurons + 5,
+        "9"     :   num_input_neurons + num_hidden_neurons + 6
     }
 
 ## Create stimulus spikes at the inuput layer (layer 0)
@@ -463,7 +466,7 @@ for neuron_idx in range(num_neurons):
     elif layer_idx == 2:
         num_sublocations = 4
         depth_causal_per_subloc = 2
-        depth_anticausal_per_subloc = 4
+        depth_anticausal_per_subloc = 7
         if supervised_hidden:
             training_on = 1
             supervised = 1

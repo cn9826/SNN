@@ -462,8 +462,8 @@ for neuron_idx in range(num_neurons):
 
     elif layer_idx == 2:
         num_sublocations = 4
-        depth_causal_per_subloc = 1
-        depth_anticausal_per_subloc = 1 
+        depth_causal_per_subloc = 2
+        depth_anticausal_per_subloc = 4
         if supervised_hidden:
             training_on = 1
             supervised = 1
@@ -615,6 +615,9 @@ for instance in range(num_instances):
     ## End of one Forward Pass
     
     # copy the sublocation_buffer to sublocation_buffer_prev in the output layer neuron's spike_in_cache
+    recorded_sublocations = sn_list[num_input_neurons+num_hidden_neurons].spike_in_cache.sublocation_buffer
+    if debug_mode:
+        f_handle.write("Recorded sublocation_idx: {}\n".format(recorded_sublocations))
     for output_neuron_idx in range(num_input_neurons + num_hidden_neurons, num_neurons):
         sn_list[output_neuron_idx].spike_in_cache.latchSublocationBufferPrev()
 

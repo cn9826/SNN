@@ -459,6 +459,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             
             # look for anticausal in-spike events in descending order from the end-of-the-queue  
             for buffer_idx in range(self.spike_in_cache.sublocation_buffer_ptr):
+
                 for i in range(self.spike_in_cache.depth_per_subloc-1, self.spike_in_cache.depth_causal_per_subloc-1, -1):
                     if (self.spike_in_cache.mem[buffer_idx][i]["time"] != None
                         and self.spike_in_cache.mem[buffer_idx][i]["causal_tag"] == 0):
@@ -473,7 +474,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     # in_spike_events_anticausal.extend(self.spike_in_cache.mem[buffer_idx][i-num_diff:i])
                     in_spike_events_anticausal.extend(
                         [
-                            self.spike_in_cache.mem[buffer_idx][idx] for idx in range(i-num_diff, i) 
+                            self.spike_in_cache.mem[buffer_idx][idx] for idx in range(i-num_diff+1, i+1) 
                             if self.spike_in_cache.mem[buffer_idx][idx]["time"] != None 
                         ]
                     )
@@ -1313,7 +1314,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         desired_ff_idx, min_fire_time, 
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
                         WeightRAM, moving_accuracy, accuracy_th, correct_cnt,
-                        num_causal_output=1, num_anticausal_output=1,
+                        num_causal_output=2, num_anticausal_output=2,
                         num_causal_hidden=3, num_anticausal_hidden=3, debug_mode=0                       
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])

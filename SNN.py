@@ -440,15 +440,16 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 # if found fewer causal in-spike events than the designated num_causal
                 # append subsequent in-spike events as causal anyway to meet num_causal quota                
                 if found_cnt_causal[buffer_idx] < num_causal:
-                    num_diff = num_causal - found_cnt_causal[buffer_idx]
-                    in_spike_events_causal.extend(
-                        [
-                            self.spike_in_cache.mem[buffer_idx][idx] for idx in range(i, i+num_diff) 
-                            if self.spike_in_cache.mem[buffer_idx][idx]["time"] != None 
-                        ]
-                    )
-                    print("Instance {}: Neuron {} has found {} causal SpikeInCache entries on sublocation {}, less than specified {}"
-                        .format(instance, self.neuron_idx, found_cnt_causal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_causal)) 
+                    # num_diff = num_causal - found_cnt_causal[buffer_idx]
+                    # in_spike_events_causal.extend(
+                    #     [
+                    #         self.spike_in_cache.mem[buffer_idx][idx] for idx in range(i, i+num_diff) 
+                    #         if self.spike_in_cache.mem[buffer_idx][idx]["time"] != None 
+                    #     ]
+                    # )
+                    if intended_output:
+                        print("Instance {}: Neuron {} has found {} causal SpikeInCache entries on sublocation {}, less than specified {}"
+                            .format(instance, self.neuron_idx, found_cnt_causal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_causal)) 
                     if debug:
                         f_handle.write("Instance {}: Neuron {} has found {} causal SpikeInCache entries on sublocation {}, less than specified {}\n"
                             .format(instance, self.neuron_idx, found_cnt_causal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_causal)) 

@@ -294,13 +294,13 @@ vth_output = 235            # with 6-spike consideration: [(6-1) x 5 x tau_u, 6 
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
 separation_window = 10
-stop_num = 120
+stop_num = 200
 
 accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on moving accuracy
-size_moving_window = 100    # the size of moving window that dynamically calculates inference accuracy during training
+size_moving_window = 150    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 2000             # number of training instances per epoch
+num_instances = 2500             # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1

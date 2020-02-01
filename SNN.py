@@ -412,7 +412,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         return (causal_fan_in_addr, t_in_causal, weight_causal,
                 anticausal_fan_in_addr, t_in_anticausal, weight_anticausal)        
 
-    def findSynapseGroup(self, instance, f_handle, num_causal, num_anticausal, output_or_hidden, 
+    def findSynapseGroup(self, instance, f_handle, intended_output, num_causal, num_anticausal, output_or_hidden, 
                         hidden_causal_reverse_search=1, hidden_anticausal_reverse_search=0, debug=1):
         if not output_or_hidden in ["output", "hidden"]:
             print("Error when calling SpikingNeruon.findSynapseGroup(): argument \"output_or_hidden\" {} is not sepcified correctly!"
@@ -478,9 +478,10 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                             if self.spike_in_cache.mem[buffer_idx][idx]["time"] != None 
                         ]
                     )
-                    
-                    print("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries on sublocation {}, less than specified {}"
-                        .format(instance, self.neuron_idx, found_cnt_anticausal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_anticausal)) 
+
+                    if intended_output:                    
+                        print("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries on sublocation {}, less than specified {}"
+                            .format(instance, self.neuron_idx, found_cnt_anticausal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_anticausal)) 
                     if debug:
                         f_handle.write("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries on sublocation {}, less than specified {}\n"
                             .format(instance, self.neuron_idx, found_cnt_anticausal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_anticausal)) 
@@ -1314,7 +1315,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         desired_ff_idx, min_fire_time, 
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
                         WeightRAM, moving_accuracy, accuracy_th, correct_cnt,
-                        num_causal_output=2, num_anticausal_output=1,
+                        num_causal_output=2, num_anticausal_output=2,
                         num_causal_hidden=3, num_anticausal_hidden=3, debug_mode=0                       
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])
@@ -1329,7 +1330,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
         spike_out_time = sn_hidden.spike_out_info[0]["time"]
 
         in_spike_events_causal, in_spike_events_anticausal = \
-            sn_hidden.findSynapseGroup(instance=instance, f_handle=f_handle,
+            sn_hidden.findSynapseGroup(instance=instance, f_handle=f_handle, 
+                                        intended_output=0,
                                         num_causal=num_causal_hidden,
                                         num_anticausal=num_anticausal_hidden,
                                         output_or_hidden="hidden",
@@ -1385,6 +1387,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
 
         in_spike_events_causal, in_spike_events_anticausal = \
             sn_intended.findSynapseGroup(instance=instance, f_handle=f_handle,
+                                        intended_output=1,
                                          num_causal=num_causal_output,
                                          num_anticausal=num_anticausal_output,
                                          output_or_hidden="output", debug=debug_mode)
@@ -1489,6 +1492,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
         
         in_spike_events_causal, in_spike_events_anticausal = \
             sn_nonintended.findSynapseGroup(instance=instance, f_handle=f_handle,
+                                        intended_output=0,
                                          num_causal=num_causal_output,
                                          num_anticausal=num_anticausal_output,
                                          output_or_hidden="output", debug=debug_mode)

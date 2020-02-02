@@ -82,7 +82,7 @@ def getInLatencies(in_pattern, early_latency_list, late_latency_list,
                     num_edge_maps=4, num_blocks=16):
 
     # num_in_neurons = num_edge_maps * num_blocks
-    in_pattern_list = ["0", "1", "2", "3", "6", "8", "9"]
+    in_pattern_list = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
     num_in_neurons = num_edge_maps * num_blocks
     if not in_pattern in in_pattern_list:
         print("Error when calling getInLatencies: illegal specification of \"in_pattern\"")
@@ -151,28 +151,72 @@ def getInLatencies(in_pattern, early_latency_list, late_latency_list,
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[3][block_idx] = latency_early 
 
-    elif in_pattern == "9":
+    elif in_pattern == "3":
         # feature map 0: '--'
-        for block_idx in [1, 2]:
+        for block_idx in [1, 2, 13, 14]:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[0][block_idx] = latency_early 
         # feature map 1: '/'
-        for block_idx in [1, 10, 13]:
+        for block_idx in [6, 14]:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[1][block_idx] = latency_early 
         # feature map 2: '|'
-        for block_idx in [5, 6, 10]:
+        for block_idx in []:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[2][block_idx] = latency_early 
         # feature map 3: '\'
-        for block_idx in [2, 5, 10]:
+        for block_idx in [2, 10]:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[3][block_idx] = latency_early 
-            
+
+    elif in_pattern == "4":
+        # feature map 0: '--'
+        for block_idx in [9, 10]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[0][block_idx] = latency_early 
+        # feature map 1: '/'
+        for block_idx in [2, 5]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[1][block_idx] = latency_early 
+        # feature map 2: '|'
+        for block_idx in [2, 6, 10, 14]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[2][block_idx] = latency_early 
+        # feature map 3: '\' 
+        for block_idx in []:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[3][block_idx] = latency_early 
+
+    elif in_pattern == "5":
+        # feature map 0: '--'
+        for block_idx in [1, 2, 13]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[0][block_idx] = latency_early 
+        # feature map 1: '/'
+        for block_idx in [14]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[1][block_idx] = latency_early 
+        # feature map 2: '|'
+        for block_idx in [1, 5]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[2][block_idx] = latency_early 
+        # feature map 3: '\'
+        for block_idx in [10]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[3][block_idx] = latency_early 
+
     elif in_pattern == "6":
         # feature map 0: '--'
         for block_idx in [13, 14]:
@@ -191,6 +235,28 @@ def getInLatencies(in_pattern, early_latency_list, late_latency_list,
             InLatencies[2][block_idx] = latency_early 
         # feature map 3: '\'
         for block_idx in [5, 10, 13]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[3][block_idx] = latency_early 
+
+    elif in_pattern == "7":
+        # feature map 0: '--'
+        for block_idx in [0, 1, 2]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[0][block_idx] = latency_early 
+        # feature map 1: '/'
+        for block_idx in [6, 9]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[1][block_idx] = latency_early 
+        # feature map 2: '|'
+        for block_idx in [13]:
+            latency_early = \
+                BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
+            InLatencies[2][block_idx] = latency_early 
+        # feature map 3: '\'
+        for block_idx in []:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[3][block_idx] = latency_early 
@@ -217,27 +283,29 @@ def getInLatencies(in_pattern, early_latency_list, late_latency_list,
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[3][block_idx] = latency_early 
 
-    elif in_pattern == "3":
+    elif in_pattern == "9":
         # feature map 0: '--'
-        for block_idx in [1, 2, 13, 14]:
+        for block_idx in [1, 2]:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[0][block_idx] = latency_early 
         # feature map 1: '/'
-        for block_idx in [6, 14]:
+        for block_idx in [1, 10, 13]:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[1][block_idx] = latency_early 
         # feature map 2: '|'
-        for block_idx in []:
+        for block_idx in [5, 6, 10]:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[2][block_idx] = latency_early 
         # feature map 3: '\'
-        for block_idx in [2, 10]:
+        for block_idx in [2, 5, 10]:
             latency_early = \
                 BimodalLatency("early", mean_early, std_early, mean_late, std_late, low_lim, high_lim)
             InLatencies[3][block_idx] = latency_early 
+            
+
     
     InLatencies_flattened = [ x for sub_list in InLatencies for x in sub_list]
     return (InLatencies_flattened, early_latency_list, late_latency_list)
@@ -273,12 +341,12 @@ def getTrainingAccuracy(moving_window, plot_on=0):
 printout_dir = "sim_printouts/FourEdgeMapsBigMoreDigits/"
 sheet_dir = "sim_printouts/FourEdgeMapsBigMoreDigits/ConnectivityTable.xlsx"
 
-num_categories = 7
+num_categories = 10
 num_edge_maps = 4
 W_input = 4
 F_hidden = 2
 S_hidden = 1
-depth_hidden_per_sublocation = 7
+depth_hidden_per_sublocation = 11
 
 ## Specify common Spiking Neuron Parameters
 duration = 80
@@ -354,16 +422,20 @@ std_early = int(2*tau_u/3)
 mean_late = 4*2*tau_u - 2*tau_u
 std_late = int(2*tau_u/3)
 
-input_patterns = ("0", "1", "2", "3", "6", "8", "9")
+input_patterns = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
 output_pattern = \
     {
         "0"     :   num_input_neurons + num_hidden_neurons,
         "1"     :   num_input_neurons + num_hidden_neurons + 1,
         "2"     :   num_input_neurons + num_hidden_neurons + 2,
         "3"     :   num_input_neurons + num_hidden_neurons + 3,
-        "6"     :   num_input_neurons + num_hidden_neurons + 4,
-        "8"     :   num_input_neurons + num_hidden_neurons + 5,
-        "9"     :   num_input_neurons + num_hidden_neurons + 6
+        "4"     :   num_input_neurons + num_hidden_neurons + 4,
+        "5"     :   num_input_neurons + num_hidden_neurons + 5,
+        "6"     :   num_input_neurons + num_hidden_neurons + 6,
+        "7"     :   num_input_neurons + num_hidden_neurons + 7,
+        "8"     :   num_input_neurons + num_hidden_neurons + 8,
+        "9"     :   num_input_neurons + num_hidden_neurons + 9
+        
     }
 
 ## Create stimulus spikes at the inuput layer (layer 0)
@@ -466,7 +538,7 @@ for neuron_idx in range(num_neurons):
     elif layer_idx == 2:
         num_sublocations = 4
         depth_causal_per_subloc = 2
-        depth_anticausal_per_subloc = 7
+        depth_anticausal_per_subloc = 11
         if supervised_hidden:
             training_on = 1
             supervised = 1

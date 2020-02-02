@@ -346,7 +346,7 @@ num_edge_maps = 4
 W_input = 4
 F_hidden = 2
 S_hidden = 1
-depth_hidden_per_sublocation = 10
+depth_hidden_per_sublocation = 9
 
 ## Specify common Spiking Neuron Parameters
 duration = 80
@@ -538,7 +538,7 @@ for neuron_idx in range(num_neurons):
     elif layer_idx == 2:
         num_sublocations = 4
         depth_causal_per_subloc = 2
-        depth_anticausal_per_subloc = 10
+        depth_anticausal_per_subloc = 9
         if supervised_hidden:
             training_on = 1
             supervised = 1

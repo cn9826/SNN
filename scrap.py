@@ -3,6 +3,7 @@ import numpy as np
 import random
 import math
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 
 
@@ -268,11 +269,47 @@ import matplotlib.pyplot as plt
 #     print("s = {}\t\t deltaWeight = {}".format(s, deltaWeight))
 
 #%%
-list_2d = \
-    [
-        [1, 2, 3], [4, 5, 6], [7, 8, 9]
-    ]
-list_1d = [ x for sub_list in list_2d for x in sub_list]
-print(list_1d[0:-1])
+# list_2d = \
+#     [
+#         [1, 2, 3], [4, 5, 6], [7, 8, 9]
+#     ]
+# list_1d = [ x for sub_list in list_2d for x in sub_list]
+# print(list_1d[0:-1])
 
-lst1 = [2, None, 3, None]
+# lst1 = [2, None, 3, None]
+
+#%%
+def createMovingAccuracyFigure(num_instances):
+    fig, ax = plt.subplots(figsize=(14, 7))
+    xticklabel_list = ['{}'.format(i) for i in range(0, num_instances, num_instances//10)]
+    
+    ax.set_xlim(0, num_instances+1)
+    ax.set_xticks(range(0, num_instances, num_instances//10))
+    ax.set_xticklabels(xticklabel_list)
+    ax.set_xlabel('Instance Index', fontsize=12)
+
+    ax.set_ylabel('Moving Accuracy During Training')
+    ax.set_ylim(0, num_instances)
+
+    ax.grid(which='major', axis='y')
+    ax.hlines(y=50, xmin=0, xmax=num_instances-1, lw=2, color='0.5', linestyle='dashed')
+    return (fig, ax)
+
+def animate(ax, instance, y):
+    ax.scatter(instance, y, marker='o', color='r', s=5)
+    plt.pause(0.001)
+
+fig, ax = createMovingAccuracyFigure(1000)
+
+instance_lst = [x for x in range(0,1000)]
+y_lst = [x for x in instance_lst]
+
+
+for i in range(0,1000):
+    # ani = FuncAnimation(fig, animate(ax, instance_lst[i], y_lst[i]))
+    animate(ax, instance_lst[i], y_lst[i])
+    print ("i = {0:4d}".format(i))
+
+plt.show()
+
+    

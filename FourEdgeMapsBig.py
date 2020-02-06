@@ -1,6 +1,7 @@
 import SNN
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 import random
 import math
 import NetworkConnectivity
@@ -56,6 +57,28 @@ def plotNeuronResponse (sn):
              xlabel="Timestep"
             )
     hax2.hlines(y=sn.threshold, xmin=t[0], xmax=t[-1], lw=2, color='0.3', linestyles='dashed')
+
+def createMovingAccuracyFigure(num_instances):
+    fig, ax = plt.subplots(figsize=(14, 7))
+    xticklabel_list = ['{}'.format(i) for i in range(0, num_instances, num_instances//10)]
+    
+    ax.set_xlim(0, num_instances+1)
+    ax.set_xticks(range(0, num_instances, num_instances//10))
+    ax.set_xticklabels(xticklabel_list)
+    ax.set_xlabel('Instance Index', fontsize=12)
+    
+    yticklabel_list = ['{0:3.2f}'.format(i) for i in np.arange(0, 1.1, 0.05)]
+    ax.set_yticks(np.arange(0, 1.1, 0.05))
+    ax.set_yticklabels(yticklabel_list)
+    ax.set_ylabel('Moving Accuracy During Training')
+    ax.set_ylim(0, 1)
+
+    ax.grid(which='both', axis='y')
+    return (fig, ax)
+
+def appendAccuracy(ax, instance, accuracy, marker_size=6):
+    ax.scatter(instance, accuracy, marker='o', color='r', s=marker_size)
+    plt.pause(0.0001)
     
 def randomInt(mean, std, num):
     value_array = np.random.normal(mean,std,num)
@@ -373,6 +396,7 @@ num_instances = 2500             # number of training instances per epoch
 ## Simulation Settings
 debug_mode = 1
 plot_InLatency = 0
+plot_MovingAccuracy = 1
 
 if supervised_hidden or supervised_output:
     printout_dir = printout_dir + "Supervised/dumpsim.txt"
@@ -490,6 +514,9 @@ else:
 if len(desired_ff_neuron) != num_instances:
     print("Error: Dimension of desired output time vector does not match the number of instances per epoch")
     exit(1)
+
+if plot_MovingAccuracy:
+    fig_accuracy, ax_acuracy = createMovingAccuracyFigure(num_instances)
 
 ######################################################################################
 
@@ -757,7 +784,8 @@ for instance in range(num_instances):
     
     accuracy_during_training[instance] = \
         getTrainingAccuracy(moving_window)
-
+    if plot_MovingAccuracy:
+        appendAccuracy(ax_acuracy, instance, accuracy_during_training[instance])
     if correct_cnt > max_correct_cnt:
         max_correct_cnt = correct_cnt
     if debug_mode:
@@ -799,4 +827,6 @@ print("End of Program!")
 #%% 
 if plot_InLatency:
     plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_bins=8)
+    plt.show()
+if plot_MovingAccuracy:
     plt.show()

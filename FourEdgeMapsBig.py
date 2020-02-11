@@ -65,12 +65,12 @@ def createMovingAccuracyFigure(num_instances):
     ax.set_xlim(0, num_instances+1)
     ax.set_xticks(range(0, num_instances, num_instances//10))
     ax.set_xticklabels(xticklabel_list)
-    ax.set_xlabel('Instance Index', fontsize=12)
+    ax.set_xlabel('Number of Instances', fontsize=14, fontweight='bold')
     
     yticklabel_list = ['{0:3.2f}'.format(i) for i in np.arange(0, 1.1, 0.05)]
     ax.set_yticks(np.arange(0, 1.1, 0.05))
     ax.set_yticklabels(yticklabel_list)
-    ax.set_ylabel('Moving Accuracy During Training')
+    ax.set_ylabel('Moving Accuracy During Training', fontsize=14, fontweight='bold')
     ax.set_ylim(0, 1)
 
     ax.grid(which='both', axis='y')

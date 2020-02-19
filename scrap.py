@@ -4,7 +4,8 @@ import random
 import math
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-import codecs, json
+import codecs
+import json
 
 
 #%% numpy stuff
@@ -305,12 +306,8 @@ import codecs, json
 # y_lst = [x for x in instance_lst]
 
 
-# for i in range(0,1000):
-#     # ani = FuncAnimation(fig, animate(ax, instance_lst[i], y_lst[i]))
-#     animate(ax, instance_lst[i], y_lst[i])
-#     print ("i = {0:4d}".format(i))
 
-# plt.show()
+
 
 #%%
 obj_text_filtered = codecs.open("./MNIST_filtered_pooled/filtered_normalized.json", 'r', encoding='utf-8').read()

@@ -2,7 +2,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow import keras
-import codecs, json 
+import codecs
+import json
 #######################################################################################
 
 def genGabor(size, gamma, sigma, lambd, theta):
@@ -200,7 +201,7 @@ g_bank = genGaborBank(size=(5,5), gamma=1, sigma=3, lambd=5, theta_lst=theta_lst
 #################################################################################################
 # mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 mnist = keras.datasets.mnist
-(train_images, train_labels), (test_images, test_labels) = mnist.load_data() 
+(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
 train_images = train_images[0:3, :, :]
 train_labels = train_labels[0:3]
 
@@ -214,35 +215,31 @@ X_filtered = convolveWithGabor(X_training, g_bank, stride=1)
 normalizeGaborFiltered(X_filtered)
 X_pooled = pooling(X_filtered, W=3)
 
-# imshowEdgeMaps(X_training[12]["image"], X_filtered[0]["edge_maps"])
-# imshowEdgeMapAndPooled(X_training[1,:,:], X_filtered[1,:,:,:], X_pooled[1,:,:,:])
-# plt.show()
+# imshowEdgeMaps(X_training[2]["image"], X_filtered[0]["edge_maps"])
+imshowEdgeMapAndPooled(X_training[1,:,:], X_filtered[1,:,:,:], X_pooled[1,:,:,:])
+plt.show()
 
 #%% save filtered_normalized edge maps (X_filtered) and pooled edge maps (X_pooled)
 #################################################################################################
-# with open("./MNIST_filtered_pooled/filtered_normalized.json", "w") as fout0:
-#     json.dump(X_filtered, fout0)
-# with open("./MNIST_filtered_pooled/pooled.json", "w") as fout1:
-#     json.dump(X_filtered, fout1)
 
-X_filtered_lst = X_filtered.tolist()
-X_pooled_lst = X_pooled.tolist()
-train_labels_lst = train_labels.tolist()
-json.dump(
-    X_filtered_lst, 
-    codecs.open("./MNIST_filtered_pooled/filtered_normalized.json", 'w', encoding='utf-8'),
-    separators=(',',':'), sort_keys=True, indent=4
-    )
-json.dump(
-    X_pooled_lst, 
-    codecs.open("./MNIST_filtered_pooled/pooled3x3.json", 'w', encoding='utf-8'),
-    separators=(',',':'), sort_keys=True, indent=4
-    )
-json.dump(
-    train_labels_lst, 
-    codecs.open("./MNIST_filtered_pooled/train_labels.json", 'w', encoding='utf-8'),
-    separators=(',',':'), sort_keys=True, indent=4
-    )
+# X_filtered_lst = X_filtered.tolist()
+# X_pooled_lst = X_pooled.tolist()
+# train_labels_lst = train_labels.tolist()
+# json.dump(
+#     X_filtered_lst,
+#     codecs.open("./MNIST_filtered_pooled/filtered_normalized.json", 'w', encoding='utf-8'),
+#     separators=(',',':'), sort_keys=True, indent=4
+# )
+# json.dump(
+#     X_pooled_lst,
+#     codecs.open("./MNIST_filtered_pooled/pooled3x3.json", 'w', encoding='utf-8'),
+#     separators=(',',':'), sort_keys=True, indent=4
+# )
+# json.dump(
+#     train_labels_lst,
+#     codecs.open("./MNIST_filtered_pooled/train_labels.json", 'w', encoding='utf-8'),
+#     separators=(',',':'), sort_keys=True, indent=4
+# )
 
 #################################################################################################
 

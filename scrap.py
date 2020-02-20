@@ -305,12 +305,24 @@ import json
 # instance_lst = [x for x in range(0,1000)]
 # y_lst = [x for x in instance_lst]
 
+#%%
+arr = np.array(
+    [[
+        [0, 1, 2],
+        [3, 4, 5],
+    ],
+    [
+        [6, 7, 8],
+        [9, 10, 11]
+    ]]
+)
 
-
-
+print(arr)
 
 #%%
-obj_text_filtered = codecs.open("./MNIST_filtered_pooled/filtered_normalized.json", 'r', encoding='utf-8').read()
-filtered_lst = json.loads(obj_text_filtered)
-filtered = np.array(filtered_lst)
-print(filtered.shape)
+# obj_text_pooled = codecs.open(
+#     "./MNIST_filtered_pooled/pooled3x3.json", 'r', encoding='utf-8'
+# ).read()
+# pooled_lst = json.loads(obj_text_pooled)
+# pooled = np.array(pooled_lst)
+# print(pooled.shape)

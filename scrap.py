@@ -317,12 +317,8 @@ arr = np.array(
     ]]
 )
 
-print(arr)
+print(arr.shape)
 
-#%%
-# obj_text_pooled = codecs.open(
-#     "./MNIST_filtered_pooled/pooled3x3.json", 'r', encoding='utf-8'
-# ).read()
-# pooled_lst = json.loads(obj_text_pooled)
-# pooled = np.array(pooled_lst)
-# print(pooled.shape)
+arr_reshaped = arr.reshape(2, 6)
+
+

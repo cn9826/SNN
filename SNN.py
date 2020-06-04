@@ -511,9 +511,9 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     if intended_output:                    
                         print("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries on sublocation {}, less than specified {}"
                             .format(instance, self.neuron_idx, found_cnt_anticausal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_anticausal)) 
-                    if debug:
-                        f_handle.write("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries on sublocation {}, less than specified {}\n"
-                            .format(instance, self.neuron_idx, found_cnt_anticausal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_anticausal)) 
+                        if debug:
+                            f_handle.write("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries on sublocation {}, less than specified {}\n"
+                                .format(instance, self.neuron_idx, found_cnt_anticausal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_anticausal))
         
         elif output_or_hidden == "hidden":
             # first look for the first mem_idx that has a "causal_tag" of 0

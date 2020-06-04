@@ -1,4 +1,4 @@
-import SNN
+import SNN_V2
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -527,7 +527,7 @@ sn_list = [None] * num_neurons
 for neuron_idx in range(num_neurons):
     layer_idx = ConnectivityTable.layer_num[neuron_idx]
     if layer_idx == 0:
-        sn = SNN.SpikingNeuron( layer_idx=layer_idx,
+        sn = SNN_V2.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx, 
                                 sublocation_idx=None,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
@@ -547,7 +547,7 @@ for neuron_idx in range(num_neurons):
         if supervised_hidden:
             training_on = 1
             supervised = 1
-        sn = SNN.SpikingNeuron( layer_idx=layer_idx,
+        sn = SNN_V2.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx, 
                                 sublocation_idx=hidden_connectivity[neuron_idx - num_input_neurons]["sublocation_idx"],
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
@@ -569,7 +569,7 @@ for neuron_idx in range(num_neurons):
         if supervised_hidden:
             training_on = 1
             supervised = 1
-        sn = SNN.SpikingNeuron( layer_idx=layer_idx,
+        sn = SNN_V2.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx,
                                 sublocation_idx=None, 
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
@@ -757,7 +757,7 @@ for instance in range(num_instances):
         moving_accuracy = 0
     else:
         moving_accuracy = accuracy_during_training[instance-1]
-    correct_cnt = SNN.combined_RSTDP_BRRC(
+    correct_cnt = SNN_V2.combined_RSTDP_BRRC(
                     sn_list=sn_list, instance=instance, inference_correct=inference_correct,
                     num_fired_output=len(output_neuron_fire_info[instance]["neuron_idx"]),
                     supervised_hidden=supervised_hidden, supervised_output=supervised_output,

@@ -511,9 +511,9 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     if intended_output:                    
                         print("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries on sublocation {}, less than specified {}"
                             .format(instance, self.neuron_idx, found_cnt_anticausal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_anticausal)) 
-                        if debug:
-                            f_handle.write("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries on sublocation {}, less than specified {}\n"
-                                .format(instance, self.neuron_idx, found_cnt_anticausal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_anticausal))
+                    if debug:
+                        f_handle.write("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries on sublocation {}, less than specified {}\n"
+                            .format(instance, self.neuron_idx, found_cnt_anticausal[buffer_idx], self.spike_in_cache.sublocation_buffer[buffer_idx], num_anticausal))
         
         elif output_or_hidden == "hidden":
             # first look for the first mem_idx that has a "causal_tag" of 0
@@ -1497,7 +1497,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             exit(1)
 
         ## update the last causal synaptic weight
-        
+
         in_spike_events_causal, in_spike_events_anticausal = \
             sn_nonintended.findSynapseGroup(instance=instance, f_handle=f_handle,
                                         intended_output=0,

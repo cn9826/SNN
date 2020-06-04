@@ -6,6 +6,7 @@ import NetworkConnectivity
 import codecs
 import json
 
+
 def index_duplicate (seq, item):
     start_at = -1
     locs = []
@@ -19,12 +20,13 @@ def index_duplicate (seq, item):
             start_at = loc
     return locs
 
+
 def createMovingAccuracyFigure(num_instances):
     fig, ax = plt.subplots(figsize=(14, 7))
-    xticklabel_list = ['{}'.format(i) for i in range(0, num_instances, num_instances // 10)]
+    xticklabel_list = ['{}'.format(i) for i in range(0, num_instances+1, num_instances // 10)]
 
     ax.set_xlim(0, num_instances + 1)
-    ax.set_xticks(range(0, num_instances, num_instances // 10))
+    ax.set_xticks(range(0, num_instances+1, num_instances // 10))
     ax.set_xticklabels(xticklabel_list)
     ax.set_xlabel('Number of Instances', fontsize=14, fontweight='bold')
 
@@ -36,6 +38,7 @@ def createMovingAccuracyFigure(num_instances):
 
     ax.grid(which='both', axis='y')
     return (fig, ax)
+
 
 def ItLmapping(pooled_array, window, kernel, alpha=0.5, poly_degree=1):
     # the intensity-to-latency mapping function
@@ -66,6 +69,7 @@ def ItLmapping(pooled_array, window, kernel, alpha=0.5, poly_degree=1):
 
     return LatencyArray
 
+
 def hist_latency(latency_array, tau_u, num_bins=8):
     latency_array_tau = latency_array / tau_u
     fig, ax = plt.subplots(figsize=(14, 7))
@@ -77,6 +81,7 @@ def hist_latency(latency_array, tau_u, num_bins=8):
     ax.set_title('Stimulus Spike Latency Distribution -- filtered and pooled MNIST',
                  fontsize=18, fontweight='bold')
 
+
 def getTrainingAccuracy(moving_window, plot_on=0):
     if None in moving_window:
         return 0
@@ -86,9 +91,21 @@ def getTrainingAccuracy(moving_window, plot_on=0):
         accuracy = correct_total / num_instances
         return accuracy
 
+
 def appendAccuracy(ax, instance, accuracy, marker_size=6):
     ax.scatter(instance, accuracy, marker='o', color='r', s=marker_size)
     plt.pause(0.0001)
+
+
+def imshow_pooled(pooled_arr, num_edge_maps=4):
+    # pooled_arr is a 3D array of size (W_hidden, W_hidden, 4)
+    fig, ax = plt.subplots(nrows=1, ncols=num_edge_maps, figsize=(15,8))
+    fig.subplots_adjust(left=0.1, right=0.9, top=1, bottom=0)
+    fig.tight_layout()
+
+    for edge_idx in range(num_edge_maps):
+        ax[edge_idx].imshow(pooled_arr[:, :, edge_idx], cmap='gray')
+
 # %% define SNN parameters
 ################################################################
 ## Specify dataset parameters
@@ -99,18 +116,18 @@ num_edge_maps = 4
 W_input = 8
 F_hidden = 3
 S_hidden = 1
-depth_hidden_per_sublocation = 9
+depth_hidden_per_sublocation = 10
 
 ## Specify common Spiking Neuron Parameters
 duration = 80
 tau_u = 8
 tau_v = None
 vth_input = 1
-vth_hidden = 112    # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)
-                    # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)
+vth_hidden = 350    # with 9-spike consideration: [(9-1) x 5 x tau_u, 9 x 5 x tau_u)
+                    # with 9-spike consideration: [(9-1) x 7 x tau_u, 9 x 7 x tau_u)
 
-vth_output = 235    # with 6-spike consideration: [(6-1) x 5 x tau_u, 6 x 5 x tau_u)
-                    # with 6-spike consideration: [(6-1) x 7 x tau_u, 6 x 7 x tau_u)
+vth_output = 1180   # with 30-spike consideration: [(30-1) x 5 x tau_u, 30 x 5 x tau_u)
+                    # with 30-spike consideration: [(30-1) x 7 x tau_u, 30 x 7 x tau_u)
 
 
 ## Supervised Training Parameters
@@ -123,22 +140,20 @@ accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on 
 size_moving_window = 150    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 2000        # number of training instances from filtered-pooled MNIST
+num_instances = 10000        # number of training instances from filtered-pooled MNIST
 
 ## Simulation Settings
-debug_mode = 1
+debug_mode = 0
 plot_MovingAccuracy = 1
 
 printout_dir = "sim_printouts/MNIST/"
 if supervised_hidden or supervised_output:
-    printout_dir = printout_dir + "Supervised/dum)psim.txt"
+    printout_dir = printout_dir + "Supervised/dumpsim.txt"
 else:
     printout_dir = printout_dir + "Inference/dumpsim.txt"
 
 if debug_mode:
     f_handle = open(printout_dir, "w+")
-    f_handle.write("supervised_hidden: {}\n".format(supervised_hidden))
-    f_handle.write("supervised_output: {}\n".format(supervised_output))
 else:
     f_handle = None
 
@@ -148,12 +163,12 @@ num_hidden_neurons = W_hidden**2 * depth_hidden_per_sublocation
 num_output_neurons = num_categories
 num_neurons = num_input_neurons + num_hidden_neurons + num_output_neurons
 
-inital_weight_input = [10] * num_input_neurons
+initial_weight_input = [10] * num_input_neurons
 initial_weight_hidden = [5] * num_hidden_neurons * F_hidden**2 * num_edge_maps
 initial_weight_output = [5] * num_output_neurons * num_hidden_neurons
 weight_vector = \
     [
-        *inital_weight_input, *initial_weight_hidden, *initial_weight_output
+        *initial_weight_input, *initial_weight_hidden, *initial_weight_output
     ]
 
 ## Initialize Connectivity
@@ -168,19 +183,25 @@ input_connectivity, hidden_connectivity, output_connectivity \
     )
 ################################################################
 # %% Loading the pooled MNIST images in shape (60000, W, W, 4)
-# ################################################################
+################################################################
 obj_text_pooled = codecs.open(
-    "./MNIST_filtered_pooled/pooled3x3.json", 'r', encoding='utf-8'
+    "/home/usr1/cni/MNIST_filtered_pooled/pooled3x3.json", 'r', encoding='utf-8'
 ).read()
 obj_text_train_labels = codecs.open(
-    "./MNIST_filtered_pooled/train_labels.json", 'r', encoding='utf-8'
+    "/home/usr1/cni/MNIST_filtered_pooled/train_labels.json", 'r', encoding='utf-8'
 ).read()
 pooled_lst = json.loads(obj_text_pooled)
 train_labels = json.loads(obj_text_train_labels)
+
 pooled = np.array(pooled_lst)
 ## replace negative value with 0's
 pooled = pooled.clip(0, 1)
 
+## take a few samples for testing purposes
+# pooled = pooled[0:num_instances, :, :]
+# train_labels = train_labels[0:num_instances]
+# for j in range(num_instances):
+#     imshow_pooled(pooled[j])
 ################################################################
 
 #%% Map each individual pooled pixel intensity into a latency value
@@ -191,7 +212,7 @@ pooled = pooled.clip(0, 1)
 #     alpha=0.5, poly_degree=1
 # )
 LatencyArray = ItLmapping(
-    pooled_array=pooled, window=8*tau_u, kernel="exponential",
+    pooled_array=pooled, window=8*tau_u, kernel="polynomial",
     alpha=0.5, poly_degree=1
 )
 # hist_latency(latency_array=LatencyArrayPoly, tau_u=tau_u, num_bins=8)
@@ -202,7 +223,7 @@ LatencyArray = ItLmapping(
 ## a 2D array of size (# of training instances, # of edge maps * W * W)
 ## e.g. (60000, 4*8*8)
 InLatencyFlat = \
-    list(LatencyArray.transpose(0, 3, 1, 2).reshape(LatencyArray.shape[0], -1))
+    LatencyArray.transpose(0, 3, 1, 2).reshape(LatencyArray.shape[0], -1).tolist()
 ################################################################
 
 #%% Define Input & Output Patterns
@@ -223,7 +244,7 @@ output_pattern = \
     }
 
 if plot_MovingAccuracy:
-    fig_accuracy, ax_acuracy = createMovingAccuracyFigure(num_instances)
+    fig_accuracy, ax_accuracy = createMovingAccuracyFigure(num_instances)
 
 #%% Instantiate a list of SpikingNeuron objects
 ######################################################################################
@@ -246,8 +267,8 @@ for neuron_idx in range(num_neurons):
                                 supervised=0
                                 )
     elif layer_idx == 1:
-        depth_causal = 4
-        depth_anticausal = 4
+        depth_causal = 9
+        depth_anticausal = 9
         if supervised_hidden:
             training_on = 1
             supervised = 1
@@ -267,7 +288,7 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        num_sublocations = 4
+        num_sublocations = 16
         depth_causal_per_subloc = 2
         depth_anticausal_per_subloc = 9
         if supervised_hidden:
@@ -451,6 +472,8 @@ for instance in range(num_instances):
                     debug_mode=debug_mode
     )
 
+    print("Instance {}: Label is {}".format(instance, train_labels[instance]))
+
     ## record training accuracy after each training instance
     if instance == 0:
         moving_window[0] = inference_correct[instance]
@@ -461,7 +484,7 @@ for instance in range(num_instances):
     accuracy_during_training[instance] = \
         getTrainingAccuracy(moving_window)
     if plot_MovingAccuracy:
-        appendAccuracy(ax_acuracy, instance, accuracy_during_training[instance])
+        appendAccuracy(ax_accuracy, instance, accuracy_during_training[instance])
     if correct_cnt > max_correct_cnt:
         max_correct_cnt = correct_cnt
     if debug_mode:

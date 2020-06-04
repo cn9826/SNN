@@ -190,19 +190,20 @@ class SpikeIncache_Output:
         self.sublocation_buffer_prev = [None for sublocation in range(self.num_sublocations)]
         self.fired = 0
 
+    # references sublocation_buffer_prev
     def writeSpikeInInfo(self, fired_synapse_addr, sublocation_idx, time, weight):
-        # at the beginning of recording location-specific in-spike events 
+        # at the beginning of recording location-specific in-spike events
         if self.sublocation_buffer_ptr == 0:
             # record the sublocation_idx in the sublocation_buffer if it has not been recorded before
             if not sublocation_idx in self.sublocation_buffer_prev:
                 self.writeSublocationBuffer(sublocation_idx)
                 # then record the in-spike event in the mem
-                self.mem[0][self.write_ptr[0]]["fired_synapse_addr"] = fired_synapse_addr 
-                self.mem[0][self.write_ptr[0]]["sublocation_idx"] = sublocation_idx 
-                self.mem[0][self.write_ptr[0]]["causal_tag"] = 1 
-                self.mem[0][self.write_ptr[0]]["weight"] = weight 
+                self.mem[0][self.write_ptr[0]]["fired_synapse_addr"] = fired_synapse_addr
+                self.mem[0][self.write_ptr[0]]["sublocation_idx"] = sublocation_idx
+                self.mem[0][self.write_ptr[0]]["causal_tag"] = 1
+                self.mem[0][self.write_ptr[0]]["weight"] = weight
                 self.mem[0][self.write_ptr[0]]["time"] = time
-                self.write_ptr[0] += 1 
+                self.write_ptr[0] += 1
 
         # if there has been sublocation_idx registered during this instance
         else:
@@ -214,10 +215,37 @@ class SpikeIncache_Output:
                     self.registerInSpikeEvents(buffer_idx, fired_synapse_addr, sublocation_idx, time, weight)
                 # if sublocation_idx has NOT been registered in this instance
                 else:
-                    if self.sublocation_buffer_ptr < self.num_sublocations:                    
+                    if self.sublocation_buffer_ptr < self.num_sublocations:
                         buffer_idx = self.sublocation_buffer_ptr
                         self.writeSublocationBuffer(sublocation_idx)
                         self.registerInSpikeEvents(buffer_idx, fired_synapse_addr, sublocation_idx, time, weight)
+
+    # Does NOT reference sublocation_buffer_prev
+    def writeSpikeInInfo_loose(self, fired_synapse_addr, sublocation_idx, time, weight):
+        # at the beginning of recording location-specific in-spike events
+        if self.sublocation_buffer_ptr == 0:
+            self.writeSublocationBuffer(sublocation_idx)
+            # then record the in-spike event in the mem
+            self.mem[0][self.write_ptr[0]]["fired_synapse_addr"] = fired_synapse_addr
+            self.mem[0][self.write_ptr[0]]["sublocation_idx"] = sublocation_idx
+            self.mem[0][self.write_ptr[0]]["causal_tag"] = 1
+            self.mem[0][self.write_ptr[0]]["weight"] = weight
+            self.mem[0][self.write_ptr[0]]["time"] = time
+            self.write_ptr[0] += 1
+        else:
+            # if sublocation_idx has been registered in this instance
+            if sublocation_idx in self.sublocation_buffer:
+                buffer_idx = self.sublocation_buffer.index(sublocation_idx)
+                self.registerInSpikeEvents(buffer_idx, fired_synapse_addr, sublocation_idx,
+                                           time, weight)
+            # if sublocation_idx has NOT been registered in this instance
+            else:
+                if self.sublocation_buffer_ptr < self.num_sublocations:
+                    buffer_idx = self.sublocation_buffer_ptr
+                    self.writeSublocationBuffer(sublocation_idx)
+                    self.registerInSpikeEvents(buffer_idx, fired_synapse_addr, sublocation_idx,
+                                               time, weight)
+
 
     def writeSublocationBuffer(self, sublocation_idx):
         self.sublocation_buffer[self.sublocation_buffer_ptr] = sublocation_idx
@@ -436,7 +464,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                         found_cnt_causal[buffer_idx] += 1
                         in_spike_events_causal.append(self.spike_in_cache.mem[buffer_idx][i])
                     if found_cnt_causal[buffer_idx] == num_causal or self.spike_in_cache.mem[buffer_idx][i]["causal_tag"] == 0:
-                        break 
+                        break
                 # if found fewer causal in-spike events than the designated num_causal
                 # append subsequent in-spike events as causal anyway to meet num_causal quota                
                 if found_cnt_causal[buffer_idx] < num_causal:
@@ -1249,7 +1277,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             
             else:
                 for i in range(len(relavent_fan_in_addr)):
-                    self.spike_in_cache.writeSpikeInInfo(
+                    self.spike_in_cache.writeSpikeInInfo_loose(
                                         fired_synapse_addr=relavent_fan_in_addr[i],
                                         sublocation_idx=sublocation_idx_list[i],
                                         time=sim_point,
@@ -1317,7 +1345,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                         f2f_neuron_lst, non_f2f_neuron_lst, f2f_neuron_idx,
                         WeightRAM, moving_accuracy, accuracy_th, correct_cnt,
                         num_causal_output=2, num_anticausal_output=1,
-                        num_causal_hidden=3, num_anticausal_hidden=3, debug_mode=0                       
+                        num_causal_hidden=6, num_anticausal_hidden=6, debug_mode=0
                         ):
     # expect num_fired_output = len(output_neuron_fire_info[instance][neuron_idx])
     # desired_ff_idx = desired_ff_neuron[instance]["ff_neuron"]
@@ -1355,10 +1383,6 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             [entry["causal_tag"] for entry in in_spike_events_causal] + \
             [entry["causal_tag"] for entry in in_spike_events_anticausal]
         
-        # spike_in_time = [mem["time"] for mem in sn_hidden.spike_in_cache.mem if mem["time"] != None]
-        # oldWeight = [mem["weight"] for mem in sn_hidden.spike_in_cache.mem if mem["weight"] != None]
-        # fan_in_addr = [mem["fired_synapse_addr"] for mem in sn_hidden.spike_in_cache.mem if mem["fired_synapse_addr"] != None]
-        # synapse_causal_tag = [mem["causal_tag"] for mem in sn_hidden.spike_in_cache.mem if mem["causal_tag"] != None]                    
         newWeight = sn_hidden.RSTDP_hidden(spike_in_time=spike_in_time, spike_out_time=spike_out_time,
                                         instance=instance, oldWeight=oldWeight,
                                         fan_in_addr=fan_in_addr, 
@@ -1412,23 +1436,6 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             t_in_anticausal = None
             oldWeight_anticausal = None
 
-        # newWeight_causal, newWeight_anticausal = \
-        #     sn_intended.BRRC_output(
-        #                             t_out=t_out,
-        #                             t_min=min_fire_time,
-        #                             instance=instance,
-        #                             oldWeight_causal=oldWeight_causal,
-        #                             causal_fan_in_addr=causal_fan_in_addr,
-        #                             t_in_causal=t_in_causal,
-        #                             oldWeight_anticausal=oldWeight_anticausal,
-        #                             anticausal_fan_in_addr=anticausal_fan_in_addr,
-        #                             t_in_anticausal=t_in_anticausal,
-        #                             f_handle=f_handle,
-        #                             reward_signal=reward_signal,
-        #                             isf2f=isf2f, isIntended=isIntended,
-        #                             moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
-        #                             debug=debug_mode
-        #                             )
         newWeight_causal, newWeight_anticausal = \
             sn_intended.RC_output_subloc_specific(
                                     t_out=t_out,
@@ -1503,24 +1510,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
         tag_causal = [entry["causal_tag"] for entry in in_spike_events_causal]
         
         t_out = sn_nonintended.spike_out_info[0]["time"]
-        
-        # newWeight_causal, newWeight_anticausal = \
-        #     sn_nonintended.BRRC_output(
-        #                             t_out=t_out,
-        #                             t_min=min_fire_time,
-        #                             instance=instance,
-        #                             oldWeight_causal=oldWeight_causal,
-        #                             causal_fan_in_addr=causal_fan_in_addr,
-        #                             t_in_causal=t_in_causal,
-        #                             oldWeight_anticausal=None,
-        #                             anticausal_fan_in_addr=None,
-        #                             t_in_anticausal=None,
-        #                             f_handle=f_handle,
-        #                             reward_signal=reward_signal,
-        #                             isf2f=isf2f, isIntended=isIntended,
-        #                             moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
-        #                             debug=debug_mode
-        #                             )
+
         newWeight_causal, _ = \
             sn_nonintended.RC_output_subloc_specific(
                                     t_out=t_out,

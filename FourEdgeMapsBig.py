@@ -1,7 +1,7 @@
 import SNN
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+
 import random
 import math
 import NetworkConnectivity
@@ -772,6 +772,8 @@ for instance in range(num_instances):
                     WeightRAM=WeightRAM, 
                     moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
                     correct_cnt=correct_cnt,
+                    num_causal_output=2, num_anticausal_output=1,
+                    num_causal_hidden=3, num_anticausal_hidden=3,
                     debug_mode=debug_mode
     )
         

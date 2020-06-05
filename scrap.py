@@ -63,8 +63,8 @@ import json
 
 # lst1 = [2, None, 3, None]
 
-lst1 = []
-lst2 = [x for x in lst1]
+lst1 = [0, 1, 2]
+
 #%%
 # def createMovingAccuracyFigure(num_instances):
 #     fig, ax = plt.subplots(figsize=(14, 7))

@@ -472,7 +472,8 @@ for instance in range(num_instances):
                     debug_mode=debug_mode
     )
 
-    print("Instance {}: Label is {}".format(instance, train_labels[instance]))
+    print("Instance {}: Label is {}; Inference Correct: {}"
+          .format(instance, train_labels[instance], inference_correct[instance]))
 
     ## record training accuracy after each training instance
     if instance == 0:

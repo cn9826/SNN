@@ -322,12 +322,12 @@ class SpikingNeuron:
         # simulation duration specified in a.u.
         self.duration = duration
 
-        self.u = [0] * int(round(self.duration / SpikingNeuron.dt))
-        self.tau_u = tau_u  # current decay constant, in units of time step
-
         if self.decaying_current:
-            self.v = [0] * int(round(self.duration / SpikingNeuron.dt))
-            self.tau_v = tau_v  # potential decay constant, in units of time step
+            self.u = [0] * int(round(self.duration / SpikingNeuron.dt))
+            self.tau_u = tau_u  # current decay constant, in units of time step
+
+        self.v = [0] * int(round(self.duration / SpikingNeuron.dt))
+        self.tau_v = tau_v  # potential decay constant, in units of time step
 
         self.threshold = threshold  # potential threshold
         self.spike_out_time_d_list = spike_out_time_d_list

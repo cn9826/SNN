@@ -372,15 +372,21 @@ S_hidden = 1
 depth_hidden_per_sublocation = 9
 
 ## Specify common Spiking Neuron Parameters
+decaying_current = 1
 duration = 80
 tau_u = 8      # in units with respect to duration
 tau_v = None     # in units with respect to duration
 vth_input = 1
-vth_hidden = 112             # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)
-                            # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)
+if decaying_current:
+    vth_hidden = 112             # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)
+                                # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)
 
-vth_output = 235            # with 6-spike consideration: [(6-1) x 5 x tau_u, 6 x 5 x tau_u)  
-                            # with 6-spike consideration: [(6-1) x 7 x tau_u, 6 x 7 x tau_u)  
+    vth_output = 235            # with 6-spike consideration: [(6-1) x 5 x tau_u, 6 x 5 x tau_u)
+                                # with 6-spike consideration: [(6-1) x 7 x tau_u, 6 x 7 x tau_u)
+else:
+    vth_hidden = 14
+    vth_output = 84
+
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
@@ -394,7 +400,7 @@ size_moving_window = 150    # the size of moving window that dynamically calcula
 num_instances = 2500             # number of training instances per epoch
 
 ## Simulation Settings
-debug_mode = 1
+debug_mode = 0
 plot_InLatency = 0
 plot_MovingAccuracy = 1
 

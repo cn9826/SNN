@@ -322,10 +322,8 @@ class SpikingNeuron:
         # simulation duration specified in a.u.
         self.duration = duration
 
-        if self.decaying_current:
-            self.u = [0] * int(round(self.duration / SpikingNeuron.dt))
-            self.tau_u = tau_u  # current decay constant, in units of time step
-
+        self.u = [0] * int(round(self.duration / SpikingNeuron.dt))
+        self.tau_u = tau_u  # current decay constant, in units of time step
         self.v = [0] * int(round(self.duration / SpikingNeuron.dt))
         self.tau_v = tau_v  # potential decay constant, in units of time step
 
@@ -869,11 +867,16 @@ class SpikingNeuron:
                                 f_handle.write("Instance {}: Neuron {} at Layer{} has fired {} times at step {}\n"
                                                .format(instance, self.neuron_idx, self.layer_idx, self.fire_cnt + 1,
                                                        sim_point))
+            else:
+                if self.tau_v is not None:
+                    self.v[sim_point] = (1 - dt / self.tau_v) * self.v[sim_point - 1]
+                else:
+                    self.v[sim_point] = self.v[sim_point - 1]
+
 
     def clearStateVariables(self):
         self.u = [0] * int(round(self.duration / SpikingNeuron.dt))
-        if SpikingNeuron.decaying_current:
-            self.v = [0] * int(round(self.duration / SpikingNeuron.dt))
+        self.v = [0] * int(round(self.duration / SpikingNeuron.dt))
 
         self.fire_cnt = -1
         for entry in self.spike_out_info:

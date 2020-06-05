@@ -497,16 +497,15 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     if found_cnt_anticausal[buffer_idx] == num_anticausal or self.spike_in_cache.mem[buffer_idx][i]["causal_tag"] == 1:
                         break 
                 # if found fewer anti-causal in-spike events than the designated num_anticausal
-                # append preceding in-spike events as anti-causal anyway to meet num_anticausal quota                
                 if found_cnt_anticausal[buffer_idx] < num_anticausal:
-                    num_diff = num_anticausal - found_cnt_anticausal[buffer_idx]
-                    # in_spike_events_anticausal.extend(self.spike_in_cache.mem[buffer_idx][i-num_diff:i])
-                    in_spike_events_anticausal.extend(
-                        [
-                            self.spike_in_cache.mem[buffer_idx][idx] for idx in range(i-num_diff+1, i+1) 
-                            if self.spike_in_cache.mem[buffer_idx][idx]["time"] != None 
-                        ]
-                    )
+                    # # append preceding in-spike events as anti-causal anyway to meet num_anticausal quota
+                    # num_diff = num_anticausal - found_cnt_anticausal[buffer_idx]
+                    # in_spike_events_anticausal.extend(
+                    #     [
+                    #         self.spike_in_cache.mem[buffer_idx][idx] for idx in range(i-num_diff+1, i+1)
+                    #         if self.spike_in_cache.mem[buffer_idx][idx]["time"] != None
+                    #     ]
+                    # )
 
                     if intended_output:                    
                         print("Instance {}: Neuron {} has found {} anti-causal SpikeInCache entries on sublocation {}, less than specified {}"

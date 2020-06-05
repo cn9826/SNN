@@ -126,8 +126,8 @@ vth_input = 1
 vth_hidden = 350    # with 9-spike consideration: [(9-1) x 5 x tau_u, 9 x 5 x tau_u)
                     # with 9-spike consideration: [(9-1) x 7 x tau_u, 9 x 7 x tau_u)
 
-vth_output = 1180   # with 30-spike consideration: [(30-1) x 5 x tau_u, 30 x 5 x tau_u)
-                    # with 30-spike consideration: [(30-1) x 7 x tau_u, 30 x 7 x tau_u)
+vth_output = 1430   # with 36-spike consideration: [(36-1) x 5 x tau_u, 36 x 5 x tau_u)
+                    # with 36-spike consideration: [(36-1) x 7 x tau_u, 36 x 7 x tau_u)
 
 
 ## Supervised Training Parameters
@@ -472,7 +472,8 @@ for instance in range(num_instances):
                     debug_mode=debug_mode
     )
 
-    print("Instance {}: Label is {}".format(instance, train_labels[instance]))
+    print("Instance {}: Label is {}; Inference Correct: {}"
+          .format(instance, train_labels[instance], inference_correct[instance]))
 
     ## record training accuracy after each training instance
     if instance == 0:

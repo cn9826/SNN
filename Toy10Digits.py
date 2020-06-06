@@ -404,7 +404,7 @@ supervised_output = 1      # turn on/off supervised training in output layer
 separation_window = 10
 stop_num = 200
 
-accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on moving accuracy
+accuracy_th = 0.85           # the coarse/fine cutoff for weight update based on moving accuracy
 size_moving_window = 150    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters

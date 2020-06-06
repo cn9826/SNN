@@ -137,10 +137,10 @@ separation_window = 10
 stop_num = 200
 
 accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on moving accuracy
-size_moving_window = 150    # the size of moving window that dynamically calculates inference accuracy during training
+size_moving_window = 1000    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 10000        # number of training instances from filtered-pooled MNIST
+num_instances = 15000        # number of training instances from filtered-pooled MNIST
 
 ## Simulation Settings
 debug_mode = 0

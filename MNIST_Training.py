@@ -126,9 +126,8 @@ vth_input = 1
 vth_hidden = 350    # with 9-spike consideration: [(9-1) x 5 x tau_u, 9 x 5 x tau_u)
                     # with 9-spike consideration: [(9-1) x 7 x tau_u, 9 x 7 x tau_u)
 
-vth_output = 1430   # with 36-spike consideration: [(36-1) x 5 x tau_u, 36 x 5 x tau_u)
-                    # with 36-spike consideration: [(36-1) x 7 x tau_u, 36 x 7 x tau_u)
-
+vth_output = 1180   # with 30-spike consideration: [(30-1) x 5 x tau_u, 30 x 5 x tau_u)
+                    # with 30-spike consideration: [(30-1) x 7 x tau_u, 30 x 7 x tau_u)
 
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
@@ -137,10 +136,10 @@ separation_window = 10
 stop_num = 200
 
 accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on moving accuracy
-size_moving_window = 150    # the size of moving window that dynamically calculates inference accuracy during training
+size_moving_window = 1000    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 10000        # number of training instances from filtered-pooled MNIST
+num_instances = 30000        # number of training instances from filtered-pooled MNIST
 
 ## Simulation Settings
 debug_mode = 0

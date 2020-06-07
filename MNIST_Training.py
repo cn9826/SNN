@@ -1,4 +1,4 @@
-import SNN
+import SNN_V2
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -112,11 +112,14 @@ def imshow_pooled(pooled_arr, num_edge_maps=4):
 num_categories = 10
 num_edge_maps = 4
 
+num_slices_per_class = 2
+slice_stride = 1
+
 ## Specify hidden layer filter size
 W_input = 8
 F_hidden = 3
 S_hidden = 1
-depth_hidden_per_sublocation = 10
+
 
 ## Specify common Spiking Neuron Parameters
 duration = 80
@@ -136,7 +139,7 @@ supervised_output = 1      # turn on/off supervised training in output layer
 separation_window = 10
 stop_num = 200
 
-accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on moving accuracy
+accuracy_th = 0.85           # the coarse/fine cutoff for weight update based on moving accuracy
 size_moving_window = 1000    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
@@ -158,9 +161,14 @@ else:
     f_handle = None
 
 W_hidden = int((W_input-F_hidden) / S_hidden) + 1
+num_hidden_slices = (num_categories-1) * slice_stride + num_slices_per_class
+num_hidden_neurons_per_slice = W_hidden**2
+num_hidden_neurons = num_hidden_neurons_per_slice * num_hidden_slices
+
 num_input_neurons = W_input**2 * num_edge_maps
-num_hidden_neurons = W_hidden**2 * depth_hidden_per_sublocation
+
 num_output_neurons = num_categories
+
 num_neurons = num_input_neurons + num_hidden_neurons + num_output_neurons
 
 initial_weight_input = [10] * num_input_neurons
@@ -175,11 +183,11 @@ weight_vector = \
 sheet_dir = "sim_printouts/MNIST/ConnectivityTable.xlsx"
 input_connectivity, hidden_connectivity, output_connectivity \
 , ConnectivityTable, WeightRAM, PotentialRAM, writer = \
-    NetworkConnectivity.initializeNetWorkConnectivity(
+    NetworkConnectivity.initializeNetWorkConnectivity_sparse_output(
         num_categories=num_categories, num_edge_maps=num_edge_maps, W_input=W_input,
         F_hidden=F_hidden, S_hidden=S_hidden,
-        depth_hidden_per_sublocation=depth_hidden_per_sublocation, weight_vector=weight_vector,
-        sheet_dir=sheet_dir
+        num_slices_per_class=num_slices_per_class, slice_stride=slice_stride,
+        weight_vector=weight_vector, sheet_dir=sheet_dir
     )
 ################################################################
 # %% Loading the pooled MNIST images in shape (60000, W, W, 4)
@@ -252,7 +260,7 @@ sn_list = [None] * num_neurons
 for neuron_idx in range(num_neurons):
     layer_idx = ConnectivityTable.layer_num[neuron_idx]
     if layer_idx == 0:
-        sn = SNN.SpikingNeuron( layer_idx=layer_idx,
+        sn = SNN_V2.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx,
                                 sublocation_idx=None,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
@@ -272,7 +280,7 @@ for neuron_idx in range(num_neurons):
         if supervised_hidden:
             training_on = 1
             supervised = 1
-        sn = SNN.SpikingNeuron( layer_idx=layer_idx,
+        sn = SNN_V2.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx,
                                 sublocation_idx=hidden_connectivity[neuron_idx - num_input_neurons]["sublocation_idx"],
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
@@ -294,7 +302,7 @@ for neuron_idx in range(num_neurons):
         if supervised_hidden:
             training_on = 1
             supervised = 1
-        sn = SNN.SpikingNeuron( layer_idx=layer_idx,
+        sn = SNN_V2.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx,
                                 sublocation_idx=None,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
@@ -454,7 +462,7 @@ for instance in range(num_instances):
         moving_accuracy = 0
     else:
         moving_accuracy = accuracy_during_training[instance-1]
-    correct_cnt = SNN.combined_RSTDP_BRRC(
+    correct_cnt = SNN_V2.combined_RSTDP_BRRC(
                     sn_list=sn_list, instance=instance, inference_correct=inference_correct,
                     num_fired_output=len(output_neuron_fire_info[instance]["neuron_idx"]),
                     supervised_hidden=supervised_hidden, supervised_output=supervised_output,

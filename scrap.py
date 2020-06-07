@@ -64,7 +64,9 @@ import json
 # lst1 = [2, None, 3, None]
 
 lst1 = [0, 1, 2]
-
+hidden_or_output_str = "Hidden"
+print("{0:7s} Neuron could not find an anti-causal in-spike entry!"
+                .format(hidden_or_output_str))
 #%%
 # def createMovingAccuracyFigure(num_instances):
 #     fig, ax = plt.subplots(figsize=(14, 7))

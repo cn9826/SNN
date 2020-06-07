@@ -583,9 +583,8 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        num_sublocations = 4
-        depth_causal_per_subloc = 2
-        depth_anticausal_per_subloc = 9
+        depth_causal = 8
+        depth_anticausal = 9
         if supervised_hidden:
             training_on = 1
             supervised = 1
@@ -594,9 +593,8 @@ for neuron_idx in range(num_neurons):
                                 sublocation_idx=None,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
                                 fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
-                                depth_causal = depth_causal_per_subloc,
-                                depth_anticausal = depth_anticausal_per_subloc,
-                                num_sublocations = num_sublocations,
+                                depth_causal = depth_causal,
+                                depth_anticausal = depth_anticausal,
                                 tau_u=tau_u,
                                 tau_v=tau_v,
                                 threshold=vth_output,
@@ -719,12 +717,12 @@ for instance in range(num_instances):
                     output_neuron_fire_info[instance]["time"].append(sim_point)
     ## End of one Forward Pass
 
-    # copy the sublocation_buffer to sublocation_buffer_prev in the output layer neuron's spike_in_cache
-    recorded_sublocations = sn_list[num_input_neurons + num_hidden_neurons].spike_in_cache.sublocation_buffer
-    if debug_mode:
-        f_handle.write("Recorded sublocation_idx: {}\n".format(recorded_sublocations))
-    for output_neuron_idx in range(num_input_neurons + num_hidden_neurons, num_neurons):
-        sn_list[output_neuron_idx].spike_in_cache.latchSublocationBufferPrev()
+    # # copy the sublocation_buffer to sublocation_buffer_prev in the output layer neuron's spike_in_cache
+    # recorded_sublocations = sn_list[num_input_neurons + num_hidden_neurons].spike_in_cache.sublocation_buffer
+    # if debug_mode:
+    #     f_handle.write("Recorded sublocation_idx: {}\n".format(recorded_sublocations))
+    # for output_neuron_idx in range(num_input_neurons + num_hidden_neurons, num_neurons):
+    #     sn_list[output_neuron_idx].spike_in_cache.latchSublocationBufferPrev()
 
     # At the end of the Forward Pass, inspect output-layer firing info
     if len(output_neuron_fire_info[instance]["neuron_idx"]) > 0:
@@ -775,7 +773,7 @@ for instance in range(num_instances):
         WeightRAM=WeightRAM,
         moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
         correct_cnt=correct_cnt,
-        num_causal_output=2, num_anticausal_output=1,
+        num_causal_output=6, num_anticausal_output=1,
         num_causal_hidden=3, num_anticausal_hidden=3,
         debug_mode=debug_mode
     )

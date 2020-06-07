@@ -137,6 +137,7 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
             {
                 "neuron_idx"            :   None,
                 "edge_map_idx"          :   None,
+                "pixel_idx"             :   None,
                 "receptive_field_info"  :   {"sublocation_idx" : [], "kernel_element_idx" : []},
                 "fan_in_synapse_addrs"  :   [],
                 "fan_in_neuron_indices" :   [],
@@ -147,7 +148,8 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
     for idx in range(num_input_neurons):
         edge_map_idx, pixel_idx = divmod(idx, W_input**2)
         input_connectivity[idx]["neuron_idx"] = [idx]
-        input_connectivity[idx]["edge_map_idx"] = edge_map_idx    
+        input_connectivity[idx]["edge_map_idx"] = edge_map_idx
+        input_connectivity[idx]["pixel_idx"] = pixel_idx
         input_connectivity[idx]["fan_in_synapse_addrs"] = [idx]
         input_connectivity[idx]["fan_in_neuron_addrs"] = []
         

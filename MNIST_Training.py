@@ -287,7 +287,7 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        num_sublocations = 16
+        num_sublocations = 12
         depth_causal_per_subloc = 2
         depth_anticausal_per_subloc = 9
         if supervised_hidden:
@@ -359,7 +359,7 @@ PreSynapticIdx_nonintended = \
 
 ## Loop through instances
 for instance in range(num_instances):
-    ## a list of spike_info_entry that contains "fired_synapse_addr", "sublocation_idx" and "time"
+    ## a list of spike_info_entry that contains "fired_synapse_addr", "location_idx" and "time"
     spike_info = \
         [
             []
@@ -379,7 +379,7 @@ for instance in range(num_instances):
                 spike_info_entry = \
                     {
                         "fired_synapse_addr": synapse_index,
-                        "sublocation_idx": None,
+                        "location_idx": None,
                         "time": sim_point
                     }
                 spike_info[sim_point].append(spike_info_entry)

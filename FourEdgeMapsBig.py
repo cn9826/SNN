@@ -479,13 +479,13 @@ accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on 
 size_moving_window = 150    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 10             # number of training instances per epoch
+num_instances = 2500             # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
 
 dump_training_stats = 1
-training_stat_dump_intvl = 1
+training_stat_dump_intvl = 100
 
 plot_InLatency = 0
 plot_MovingAccuracy = 1

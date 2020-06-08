@@ -207,8 +207,8 @@ duration = 80
 tau_u = 8
 tau_v = None
 vth_input = 1
-vth_hidden = 240    # with 6-spike consideration: [(6-1) x 5 x tau_u, *6 x 5 x tau_u)
-                    # with 6-spike consideration: [(6-1) x 7 x tau_u, 6 x 7 x tau_u)
+vth_hidden = 350    # with 9-spike consideration: [(9-1) x 5 x tau_u, *9 x 5 x tau_u)
+                    # with 9-spike consideration: [(9-1) x 7 x tau_u, 9 x 7 x tau_u)
 
 vth_output = 672    # with 12-spike consideration: [(12-1) x 5 x tau_u, 12 x 5 x tau_u)
                     # with 12-spike consideration: [(12-1) x 7 x tau_u, *12 x 7 x tau_u)
@@ -587,7 +587,7 @@ for instance in range(num_instances):
                     moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
                     correct_cnt=correct_cnt,
                     num_causal_output = 12, num_anticausal_output = 6,
-                    num_causal_hidden = 6, num_anticausal_hidden=6,
+                    num_causal_hidden = 9, num_anticausal_hidden=9,
                     debug_mode=debug_mode
     )
 

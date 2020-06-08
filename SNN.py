@@ -1092,7 +1092,145 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                             f_handle.write("Instance {}: anti-Causal F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
                             .format(instance, oldWeight_anticausal[i], newWeight_anticausal[i], anticausal_fan_in_addr[i], self.neuron_idx, t_out))                           
         return (newWeight_causal, newWeight_anticausal)
-            
+
+    def RSTDP_output(self, t_out, t_min, instance,
+                                  oldWeight_causal, causal_fan_in_addr, t_in_causal, tag_causal,
+                                  oldWeight_anticausal, anticausal_fan_in_addr, t_in_anticausal, tag_anticausal,
+                                  f_handle,
+                                  reward_signal, isf2f, isIntended,
+                                  moving_accuracy, accuracy_th,
+                                  A_causal_coarse=2, A_causal_fine=1, tau_causal=50,
+                                  A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=30,
+                                  max_weight=7, min_weight=-8, deltaWeight_causal_default=2,
+                                  deltaWeight_anticausal_default=1,
+                                  kernel = "exponential",
+                                  debug=0):
+        if not kernel in ["exponential", "rectangle"]:
+            print("Error when calling RSTDP_output: {} is not in the kernel list!"
+                  .format(kernel))
+            exit(1)
+
+        if moving_accuracy >= accuracy_th:  # determine A
+            A_causal = A_causal_fine
+            A_anticausal = A_anticausal_fine
+            if debug:
+                f_handle.write("Instance {}: switching to Fine-update at out-spike time {}\n"
+                               .format(instance, t_out))
+        else:
+            A_causal = A_causal_coarse
+            A_anticausal = A_anticausal_coarse
+
+        newWeight_causal = oldWeight_causal[:]
+
+        if anticausal_fan_in_addr != None:
+            newWeight_anticausal = oldWeight_anticausal[:]
+        else:
+            newWeight_anticausal = None
+
+        if isIntended:
+            # F2F P+ on the intended, t_ref = t_in
+            if reward_signal and isf2f:
+                for i in range(len(oldWeight_causal)):
+                    if tag_causal[i] == 1:
+                        s_causal = t_out - t_in_causal[i]
+                        if kernel == "exponential":
+                            deltaWeight_causal = \
+                                round(A_causal * math.exp(-(s_causal/tau_causal)))
+                        elif kernel == "rectangle":
+                            deltaWeight_causal = A_causal
+                    else:
+                        print("Warning: Instance {}: Intended F2F Output Neuron is updating on a \
+                            causal event but tag_causal is not \"1\""
+                              .format(instance))
+                        exit(1)
+
+                if anticausal_fan_in_addr != None:
+                    for i in range(len(oldWeight_anticausal)):
+                        if tag_anticausal[i] == 0:
+                            s_anticausal = t_out - t_in_anticausal[i]
+                            if kernel == "exponential":
+                                deltaWeight_anticausal = \
+                                    round(-A_anticausal * math.exp(s_anticausal / tau_anticausal))
+                            elif kernel == "rectangle":
+                                deltaWeight_anticausal = -A_anticausal
+                        else:
+                            print("Warning: Instance {}: Intended F2F Output Neuron is updating on an \
+                                anti-causal event but tag_causal is not \"0\""
+                                  .format(instance))
+                            exit(1)
+                        newWeight_anticausal[i] = oldWeight_anticausal[i] + deltaWeight_anticausal
+                        newWeight_anticausal[i] = clip_newWeight(newWeight_anticausal[i], max_weight, min_weight)
+                        if debug:
+                            f_handle.write(
+                                "Instance {}: anti-Causal F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} \
+                                on Neuron {} upon out-spike at time {}\n"
+                                .format(instance, oldWeight_anticausal[i], newWeight_anticausal[i],
+                                        anticausal_fan_in_addr[i], self.neuron_idx, t_out))
+
+            # non-F2F P- on the intended, t_ref = t_min, probably needs more thought!
+            elif not reward_signal and not isf2f:
+                deltaWeight_causal = deltaWeight_causal_default
+                if anticausal_fan_in_addr != None:
+                    # Needs more thought maybe!
+                    deltaWeight_anticausal = -deltaWeight_anticausal_default
+                for i in range(len(oldWeight_causal)):
+                    newWeight_causal[i] = oldWeight_causal[i] + deltaWeight_causal
+                    newWeight_causal[i] = clip_newWeight(newWeight_causal[i], max_weight, min_weight)
+                    if debug:
+                        f_handle.write("Instance {}: Causal      non-F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight_causal[i], newWeight_causal[i], causal_fan_in_addr[i], self.neuron_idx, t_out))
+                if anticausal_fan_in_addr != None:
+                    for i in range(len(oldWeight_anticausal)):
+                        newWeight_anticausal[i] = oldWeight_anticausal[i] + deltaWeight_anticausal
+                        newWeight_anticausal[i] = clip_newWeight(newWeight_anticausal[i], max_weight, min_weight)
+                        if debug:
+                            f_handle.write("Instance {}: anti-Causal      non-F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight_anticausal[i], newWeight_anticausal[i], anticausal_fan_in_addr[i], self.neuron_idx, t_out))
+
+        elif not isIntended:
+            # non-F2F P+ on the non-intended, t_ref = t_min, but maybe t_ref can be t_in
+            if reward_signal and not isf2f:
+                s = t_out - t_min
+                if kernel == "exponential":
+                    deltaWeight_causal = \
+                        round(-A_causal * math.exp(-s/tau_causal))
+                elif kernel == "rectangle":
+                    deltaWeight_causal = -A_causal
+                # Here I am canceling the update on anti-causal events on non-F2F P+ neurons
+                # since my goal is to quench their strong reactions to causal events so that they fire later
+                for i in range(len(oldWeight_causal)):
+                    newWeight_causal[i] = oldWeight_causal[i] + deltaWeight_causal
+                    newWeight_causal[i] = clip_newWeight(newWeight_causal[i], max_weight, min_weight)
+                    if debug:
+                        f_handle.write(
+                            "Instance {}: Causal      non-F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                            .format(instance, oldWeight_causal[i], newWeight_causal[i], causal_fan_in_addr[i],
+                                    self.neuron_idx, t_out))
+
+            # F2F P- on the non-intended, t_ref = t_in
+            elif not reward_signal and isf2f:
+                for i in range(len(oldWeight_causal)):
+                    if tag_causal[i] == 1:
+                        s_causal = t_out - t_in_causal[i]
+                        if kernel == "exponential":
+                            deltaWeight_causal = \
+                                round(-A_causal * math.exp(-(s_causal/tau_causal)))
+                        elif kernel == "rectangle":
+                            deltaWeight_causal = -A_causal
+                    else:
+                        print("Warning: Instance {}: Non-Intended F2F Output Neuron is updating on a \
+                            causal event but tag_causal is not \"1\""
+                              .format(instance))
+                        exit(1)
+                    newWeight_causal[i] = oldWeight_causal[i] + deltaWeight_causal
+                    newWeight_causal[i] = clip_newWeight(newWeight_causal[i], max_weight, min_weight)
+                    if debug:
+                        f_handle.write("Instance {}: Causal      F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight_causal[i], newWeight_causal[i], causal_fan_in_addr[i], self.neuron_idx, t_out))
+                # Here I am canceling the update on anti-causal events on non-F2F P- neurons
+                # since my goal is to quench their strong reactions to causal events so that they fire later
+        return (newWeight_causal, newWeight_anticausal)
+
     def RSTDP_hidden(self, spike_in_time, spike_out_time, instance,
                     oldWeight, fan_in_addr, synapse_causal_tag, neuron_causal_tag, f_handle, 
                     reward_signal, isf2f, isIntended, 
@@ -1418,7 +1556,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             oldWeight_anticausal = None
 
         newWeight_causal, newWeight_anticausal = \
-            sn_intended.RC_output_subloc_specific(
+            sn_intended.RSTDP_output(
                                     t_out=t_out,
                                     t_min=min_fire_time,
                                     instance=instance,
@@ -1496,7 +1634,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
         t_out = sn_nonintended.spike_out_info[0]["time"]
 
         newWeight_causal, _ = \
-            sn_nonintended.RC_output_subloc_specific(
+            sn_nonintended.RSTDP_output(
                                     t_out=t_out,
                                     t_min=min_fire_time,
                                     instance=instance,

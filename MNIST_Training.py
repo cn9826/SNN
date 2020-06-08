@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import NetworkConnectivity
 import codecs
 import json
-
+from datetime import datetime
 
 def index_duplicate (seq, item):
     start_at = -1
@@ -23,10 +23,10 @@ def index_duplicate (seq, item):
 
 def createMovingAccuracyFigure(num_instances):
     fig, ax = plt.subplots(figsize=(14, 7))
-    xticklabel_list = ['{}'.format(i) for i in range(0, num_instances+1, num_instances // 10)]
+    xticklabel_list = ['{}'.format(i) for i in range(0, num_instances+1, 1000)]
 
     ax.set_xlim(0, num_instances + 1)
-    ax.set_xticks(range(0, num_instances+1, num_instances // 10))
+    ax.set_xticks(range(0, num_instances+1, 1000))
     ax.set_xticklabels(xticklabel_list)
     ax.set_xlabel('Number of Instances', fontsize=14, fontweight='bold')
 
@@ -91,11 +91,95 @@ def getTrainingAccuracy(moving_window, plot_on=0):
         accuracy = correct_total / num_instances
         return accuracy
 
+def getUntrainedPerc(instance, WeightRAM_inst, W_hidden, num_categories,
+                     num_input_neurons, num_fan_in_hidden,
+                     num_fan_in_output, appendUntrainedStats, f_handle_training_stats,
+                     ax_accuracy
+                     ):
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    f_handle_training_stats.write("--------------Instance {}------------------------------\n"
+                                  .format(instance))
+    f_handle_training_stats.write("{}\n".format(dt_string))
+
+    total_trained_perc = \
+        sum(WeightRAM.dirty[num_input_neurons:]) \
+        / (len(WeightRAM.dirty) - num_input_neurons)
+    print(
+        "Total untrained Synapse Percentage:{perc:.2%}\n"
+            .format(perc=1 - total_trained_perc)
+    )
+    f_handle_training_stats.write(
+        "Total untrained Synapse Percentage:{perc:.2%}\n\n"
+            .format(perc=1 - total_trained_perc)
+    )
+
+    hidden_untrained_bins = [0] * W_hidden ** 2
+    hidden_trained = \
+        sum(WeightRAM.dirty[num_input_neurons:num_input_neurons + num_fan_in_hidden])
+    hidden_trained_perc = hidden_trained / num_fan_in_hidden
+
+    hidden_untrained = num_fan_in_hidden - hidden_trained
+
+    for synapse_idx in range(num_input_neurons, num_input_neurons + num_fan_in_hidden):
+        if WeightRAM.dirty[synapse_idx] == 0:
+            sublocation_idx = WeightRAM.post_neuron_location[synapse_idx]
+            hidden_untrained_bins[sublocation_idx] += 1
+
+    f_handle_training_stats.write(
+        "Untrained Fan-in Synapse in Hidden layer:{perc:.2%}\n"
+            .format(perc=1 - hidden_trained_perc)
+    )
+
+    f_handle_training_stats.write(
+        "Untrained Fan-in Synapses breakdown by sublocation:\n"
+    )
+    for sublocation_idx in range(W_hidden ** 2):
+        f_handle_training_stats.write(
+            "location_idx: {0:2d}\t\tUntrained Percentage: {1:.2%}\n"
+                .format(sublocation_idx, hidden_untrained_bins[sublocation_idx] / num_fan_in_hidden)
+        )
+
+    f_handle_training_stats.write("\n")
+
+    output_untrained_bins = [0] * num_categories
+    output_trained_perc = \
+        sum(WeightRAM.dirty[num_input_neurons + num_fan_in_hidden:
+                            num_input_neurons + num_fan_in_hidden + num_fan_in_output]) \
+        / num_fan_in_output
+    for synapse_idx \
+            in range(num_input_neurons + num_fan_in_hidden,
+                     num_input_neurons + num_fan_in_hidden + num_fan_in_output):
+        if WeightRAM.dirty[synapse_idx] == 0:
+            category_idx = WeightRAM.post_neuron_location[synapse_idx]
+            output_untrained_bins[category_idx] += 1
+    f_handle_training_stats.write(
+        "Untrained Fan-in Synapse in Output layer:{perc:.2%}\n"
+            .format(perc=1 - output_trained_perc)
+    )
+    f_handle_training_stats.write(
+        "Untrained Fan-in Synapses breakdown by label:\n"
+    )
+    for category_idx in range(num_categories):
+        f_handle_training_stats.write(
+            "location_idx: {0:2d}\t\tUntrained Percentage: {1:.2%}\n"
+                .format(category_idx, output_untrained_bins[category_idx] / num_fan_in_output)
+        )
+
+    f_handle_training_stats.write("----------------------------------------------------\n\n")
+    if appendUntrainedStats:
+        appendUntrainedPerc(ax_accuracy, instance, 1 - total_trained_perc)
+
+
 
 def appendAccuracy(ax, instance, accuracy, marker_size=6):
     ax.scatter(instance, accuracy, marker='o', color='r', s=marker_size)
     plt.pause(0.0001)
 
+def appendUntrainedPerc(ax, instance, untrained_perc, marker_size=6):
+    ax.scatter(instance, untrained_perc, marker='o', color='g', s=marker_size)
+    ax.text(instance, untrained_perc, "{0:.2%}".format(untrained_perc), fontsize=8)
+    plt.pause(0.0001)
 
 def imshow_pooled(pooled_arr, num_edge_maps=4):
     # pooled_arr is a 3D array of size (W_hidden, W_hidden, 4)
@@ -123,43 +207,60 @@ duration = 80
 tau_u = 8
 tau_v = None
 vth_input = 1
-vth_hidden = 350    # with 9-spike consideration: [(9-1) x 5 x tau_u, 9 x 5 x tau_u)
-                    # with 9-spike consideration: [(9-1) x 7 x tau_u, 9 x 7 x tau_u)
+vth_hidden = 240    # with 6-spike consideration: [(6-1) x 5 x tau_u, *6 x 5 x tau_u)
+                    # with 6-spike consideration: [(6-1) x 7 x tau_u, 6 x 7 x tau_u)
 
-vth_output = 1180   # with 30-spike consideration: [(30-1) x 5 x tau_u, 30 x 5 x tau_u)
-                    # with 30-spike consideration: [(30-1) x 7 x tau_u, 30 x 7 x tau_u)
+vth_output = 672    # with 12-spike consideration: [(12-1) x 5 x tau_u, 12 x 5 x tau_u)
+                    # with 12-spike consideration: [(12-1) x 7 x tau_u, *12 x 7 x tau_u)
 
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer
 separation_window = 10
-stop_num = 200
+stop_num = 500
 
-accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on moving accuracy
+accuracy_th = 0.85           # the coarse/fine cutoff for weight update based on moving accuracy
 size_moving_window = 1000    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 30000        # number of training instances from filtered-pooled MNIST
+num_instances = 15000        # number of training instances from filtered-pooled MNIST
 
 ## Simulation Settings
 debug_mode = 0
+
+dump_training_stats = 1
+dump_training_identifier = "Fig16"
+training_stat_dump_intvl = 1000
+
 plot_MovingAccuracy = 1
+appendUntrainedStats = 1
 
 printout_dir = "sim_printouts/MNIST/"
 if supervised_hidden or supervised_output:
-    printout_dir = printout_dir + "Supervised/dumpsim.txt"
+    dumpsim_dir = printout_dir + "Supervised/dumpsim.txt"
 else:
-    printout_dir = printout_dir + "Inference/dumpsim.txt"
+    dumpsim_dir = printout_dir + "Inference/dumpsim.txt"
 
 if debug_mode:
-    f_handle = open(printout_dir, "w+")
+    f_handle = open(dumpsim_dir, "w+")
 else:
     f_handle = None
 
+if dump_training_stats:
+    f_handle_training_stats = open(printout_dir + "Supervised/training_stats_"+ \
+                                    dump_training_identifier + ".txt", "w+")
+    f_handle_training_stats.write("Synapse Stats during Training\n")
+
 W_hidden = int((W_input-F_hidden) / S_hidden) + 1
+
 num_input_neurons = W_input**2 * num_edge_maps
+
 num_hidden_neurons = W_hidden**2 * depth_hidden_per_sublocation
+num_fan_in_hidden = num_hidden_neurons * F_hidden**2 * num_edge_maps
+
 num_output_neurons = num_categories
+num_fan_in_output = num_output_neurons * num_hidden_neurons
+
 num_neurons = num_input_neurons + num_hidden_neurons + num_output_neurons
 
 initial_weight_input = [10] * num_input_neurons
@@ -180,6 +281,15 @@ input_connectivity, hidden_connectivity, output_connectivity \
         depth_hidden_per_sublocation=depth_hidden_per_sublocation, weight_vector=weight_vector,
         sheet_dir=sheet_dir
     )
+
+## Initialize InhibitionScoreboard
+InhibitScoreboard_lst = \
+    [
+        SNN.IntermapInhibitScoreboard(0, W_input),
+        SNN.IntermapInhibitScoreboard(1, W_hidden),
+        None
+    ]
+
 ################################################################
 # %% Loading the pooled MNIST images in shape (60000, W, W, 4)
 ################################################################
@@ -251,9 +361,12 @@ sn_list = [None] * num_neurons
 for neuron_idx in range(num_neurons):
     layer_idx = ConnectivityTable.layer_num[neuron_idx]
     if layer_idx == 0:
+        inhibit_enable = 0
         sn = SNN.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx,
-                                sublocation_idx=None,
+                                location_idx=input_connectivity[neuron_idx]["pixel_idx"],
+                                slice_idx=input_connectivity[neuron_idx]["edge_map_idx"],
+                                inhibit_enable=inhibit_enable,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
                                 fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
                                 depth_causal = 1,
@@ -268,12 +381,15 @@ for neuron_idx in range(num_neurons):
     elif layer_idx == 1:
         depth_causal = 9
         depth_anticausal = 9
+        inhibit_enable = 1
         if supervised_hidden:
             training_on = 1
             supervised = 1
         sn = SNN.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx,
-                                sublocation_idx=hidden_connectivity[neuron_idx - num_input_neurons]["sublocation_idx"],
+                                location_idx=hidden_connectivity[neuron_idx - num_input_neurons]["sublocation_idx"],
+                                slice_idx = hidden_connectivity[neuron_idx-num_input_neurons]["depth_idx"],
+                                inhibit_enable = inhibit_enable,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
                                 fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
                                 depth_causal = depth_causal,
@@ -287,20 +403,21 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        num_sublocations = 12
-        depth_causal_per_subloc = 2
-        depth_anticausal_per_subloc = 9
+        depth_causal = 12
+        depth_anticausal = 24
+        inhibit_enable = 0
         if supervised_hidden:
             training_on = 1
             supervised = 1
         sn = SNN.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx,
-                                sublocation_idx=None,
+                                location_idx=None,
+                                slice_idx = None,
+                                inhibit_enable = inhibit_enable,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
                                 fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
-                                depth_causal = depth_causal_per_subloc,
-                                depth_anticausal = depth_anticausal_per_subloc,
-                                num_sublocations = num_sublocations,
+                                depth_causal = depth_causal,
+                                depth_anticausal = depth_anticausal,
                                 tau_u=tau_u,
                                 tau_v=tau_v,
                                 threshold=vth_output,
@@ -390,6 +507,7 @@ for instance in range(num_instances):
                                     WeightRAM_inst=WeightRAM,
                                     instance=instance,
                                     f_handle=f_handle,
+                                    InhibitScoreboard_inst=InhibitScoreboard_lst[sn_list[i].layer_idx],
                                     debug_mode=debug_mode
                                     )
             # upadate the current potential to PotentialRAM
@@ -411,13 +529,13 @@ for instance in range(num_instances):
                     output_neuron_fire_info[instance]["time"].append(sim_point)
     ## End of one Forward Pass
 
-    ## copy the sublocation_buffer to sublocation_buffer_prev
-    ## in the output layer neuron's spike_in_cache
-    recorded_sublocations = sn_list[num_input_neurons+num_hidden_neurons].spike_in_cache.sublocation_buffer
-    if debug_mode:
-        f_handle.write("Recorded sublocation_idx: {}\n".format(recorded_sublocations))
-    for output_neuron_idx in range(num_input_neurons + num_hidden_neurons, num_neurons):
-        sn_list[output_neuron_idx].spike_in_cache.latchSublocationBufferPrev()
+    # ## copy the sublocation_buffer to sublocation_buffer_prev
+    # ## in the output layer neuron's spike_in_cache
+    # recorded_sublocations = sn_list[num_input_neurons+num_hidden_neurons].spike_in_cache.sublocation_buffer
+    # if debug_mode:
+    #     f_handle.write("Recorded sublocation_idx: {}\n".format(recorded_sublocations))
+    # for output_neuron_idx in range(num_input_neurons + num_hidden_neurons, num_neurons):
+    #     sn_list[output_neuron_idx].spike_in_cache.latchSublocationBufferPrev()
 
     ## At the end of the Forward Pass, inspect output-layer firing info
     if len(output_neuron_fire_info[instance]["neuron_idx"]) > 0:
@@ -468,6 +586,8 @@ for instance in range(num_instances):
                     WeightRAM=WeightRAM,
                     moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
                     correct_cnt=correct_cnt,
+                    num_causal_output = 12, num_anticausal_output = 6,
+                    num_causal_hidden = 6, num_anticausal_hidden=6,
                     debug_mode=debug_mode
     )
 
@@ -497,9 +617,21 @@ for instance in range(num_instances):
         break
 
     ## clear the state varaibles of sn_list and PotentialRAM
+    InhibitScoreboard_lst[0].clearScoreboard()
+    InhibitScoreboard_lst[1].clearScoreboard()
     PotentialRAM.clearPotential()
     for i in range(num_neurons):
         sn_list[i].clearStateVariables()
+
+    ## dump training statistics
+    if dump_training_stats and \
+            ((instance+1) % training_stat_dump_intvl) == 0:
+        getUntrainedPerc(instance=instance, WeightRAM_inst=WeightRAM, W_hidden=W_hidden,
+                         num_categories=num_categories,
+                         num_input_neurons=num_input_neurons, num_fan_in_hidden=num_fan_in_hidden,
+                         num_fan_in_output=num_fan_in_output, appendUntrainedStats=appendUntrainedStats,
+                         f_handle_training_stats=f_handle_training_stats, ax_accuracy=ax_accuracy
+                         )
 
 if debug_mode:
     f_handle.write("Maximum successive correct count:{}\n".format(max_correct_cnt))

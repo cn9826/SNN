@@ -42,6 +42,11 @@ class WeightRAM:   # indexed by fan_in_synapse_addr
         self.weight = [None for row in range(num_synapses)]
         self.pre_neuron_idx = [None for row in range(num_synapses)]
         self.post_neuron_idx = [None for row in range(num_synapses)]
+        
+	# fields for training statistics 
+        self.dirty  = [0 for row in range(num_synapses)]
+        self.post_neuron_layer = [None for row in range(num_synapses)]
+        self.post_neuron_location = [None for row in range(num_synapses)]
 
 class PotentialRAM:  # indexed by neuron_idx
     def __init__(self, num_neurons):
@@ -403,6 +408,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         for i in range(len(fan_in_addr)):
             matched_addr = WeightRAM_inst.synapse_addr.index(fan_in_addr[i])
             WeightRAM_inst.weight[matched_addr] = newWeight[i]
+            WeightRAM_inst.dirty[matched_addr] = 1
         
     def findSynapse(self, instance, f_handle, stop_num_causal=1, stop_num_anticausal=1, debug=1):
         ## used on output layer neurons during hidden layer training to locate a pair of 
@@ -1590,7 +1596,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
     else:
         correct_cnt = 0
         inference_correct[instance] = 0
-        ## Strengthen the last 2 causal synaptic weights on the intended output-layer
+        ## Strengthen the last causal synaptic weights on the intended output-layer
         if supervised_output:
             reward_signal = 0
             isf2f = 0

@@ -250,6 +250,20 @@ def initializeNetWorkConnectivity(num_categories, num_edge_maps, W_input, F_hidd
         if synapse_addr >= num_input_neurons:
             pre_neuron_idx_WRAM, _ = index_2d(ConnectivityTable.fan_out_synapse_addr, synapse_addr)
             WeightRAM.pre_neuron_idx[synapse_addr] = pre_neuron_idx_WRAM
+	
+        # fields for training statistics
+        WeightRAM.post_neuron_layer[synapse_addr] = ConnectivityTable.layer_num[post_neuron_idx_WRAM]
+
+        if ConnectivityTable.layer_num[post_neuron_idx_WRAM] == 0:
+            WeightRAM.post_neuron_location[synapse_addr] = \
+                    input_connectivity[post_neuron_idx_WRAM]["pixel_idx"]
+        elif ConnectivityTable.layer_num[post_neuron_idx_WRAM] == 1:
+            WeightRAM.post_neuron_location[synapse_addr] = \
+                    hidden_connectivity[post_neuron_idx_WRAM-num_input_neurons]["sublocation_idx"]
+        elif ConnectivityTable.layer_num[post_neuron_idx_WRAM] == 2:
+            WeightRAM.post_neuron_location[synapse_addr] = \
+                    output_connectivity[post_neuron_idx_WRAM-num_input_neurons-num_hidden_neurons]["category_idx"]
+
 #############################################################################################
 
 

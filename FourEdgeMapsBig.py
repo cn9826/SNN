@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 
 import random
 import math
+from datetime import datetime
 import NetworkConnectivity
+
 
 #%%
 
@@ -78,6 +80,11 @@ def createMovingAccuracyFigure(num_instances):
 
 def appendAccuracy(ax, instance, accuracy, marker_size=6):
     ax.scatter(instance, accuracy, marker='o', color='r', s=marker_size)
+    plt.pause(0.0001)
+
+def appendUntrainedPerc(ax, instance, untrained_perc, marker_size=6):
+    ax.scatter(instance, untrained_perc, marker='o', color='g', s=marker_size)
+    ax.text(instance, untrained_perc, "{0:.2%}".format(untrained_perc), fontsize=8)
     plt.pause(0.0001)
     
 def randomInt(mean, std, num):
@@ -359,6 +366,87 @@ def getTrainingAccuracy(moving_window, plot_on=0):
         correct_total = sum(moving_window)
         accuracy = correct_total / num_instances
         return accuracy
+
+def getUntrainedPerc(instance, WeightRAM_inst, W_hidden, num_categories,
+                     num_input_neurons, num_fan_in_hidden,
+                     num_fan_in_output, appendUntrainedStats, f_handle_training_stats,
+                     ax_accuracy
+                     ):
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    f_handle_training_stats.write("--------------Instance {}------------------------------\n"
+                                  .format(instance))
+    f_handle_training_stats.write("{}\n".format(dt_string))
+
+    total_trained_perc = \
+        sum(WeightRAM.dirty[num_input_neurons:]) \
+        / (len(WeightRAM.dirty) - num_input_neurons)
+    print(
+        "Total untrained Synapse Percentage:{perc:.2%}\n"
+            .format(perc=1 - total_trained_perc)
+    )
+    f_handle_training_stats.write(
+        "Total untrained Synapse Percentage:{perc:.2%}\n\n"
+            .format(perc=1 - total_trained_perc)
+    )
+
+    hidden_untrained_bins = [0] * W_hidden ** 2
+    hidden_trained = \
+        sum(WeightRAM.dirty[num_input_neurons:num_input_neurons + num_fan_in_hidden])
+    hidden_trained_perc = hidden_trained / num_fan_in_hidden
+
+    hidden_untrained = num_fan_in_hidden - hidden_trained
+
+    for synapse_idx in range(num_input_neurons, num_input_neurons + num_fan_in_hidden):
+        if WeightRAM.dirty[synapse_idx] == 0:
+            sublocation_idx = WeightRAM.post_neuron_location[synapse_idx]
+            hidden_untrained_bins[sublocation_idx] += 1
+
+    f_handle_training_stats.write(
+        "Untrained Fan-in Synapse in Hidden layer:{perc:.2%}\n"
+            .format(perc=1 - hidden_trained_perc)
+    )
+
+    f_handle_training_stats.write(
+        "Untrained Fan-in Synapses breakdown by sublocation:\n"
+    )
+    for sublocation_idx in range(W_hidden ** 2):
+        f_handle_training_stats.write(
+            "location_idx: {0:2d}\t\tUntrained Percentage: {1:.2%}\n"
+                .format(sublocation_idx, hidden_untrained_bins[sublocation_idx] / num_fan_in_hidden)
+        )
+
+    f_handle_training_stats.write("\n")
+
+    output_untrained_bins = [0] * num_categories
+    output_trained_perc = \
+        sum(WeightRAM.dirty[num_input_neurons + num_fan_in_hidden:
+                            num_input_neurons + num_fan_in_hidden + num_fan_in_output]) \
+        / num_fan_in_output
+    for synapse_idx \
+            in range(num_input_neurons + num_fan_in_hidden,
+                     num_input_neurons + num_fan_in_hidden + num_fan_in_output):
+        if WeightRAM.dirty[synapse_idx] == 0:
+            category_idx = WeightRAM.post_neuron_location[synapse_idx]
+            output_untrained_bins[category_idx] += 1
+    f_handle_training_stats.write(
+        "Untrained Fan-in Synapse in Output layer:{perc:.2%}\n"
+            .format(perc=1 - output_trained_perc)
+    )
+    f_handle_training_stats.write(
+        "Untrained Fan-in Synapses breakdown by label:\n"
+    )
+    for category_idx in range(num_categories):
+        f_handle_training_stats.write(
+            "location_idx: {0:2d}\t\tUntrained Percentage: {1:.2%}\n"
+                .format(category_idx, output_untrained_bins[category_idx] / num_fan_in_output)
+        )
+
+    f_handle_training_stats.write("----------------------------------------------------\n\n")
+    if appendUntrainedStats:
+        appendUntrainedPerc(ax_accuracy, instance, 1 - total_trained_perc)
+
+
 #%% Parameters to tune
 ######################################################################################
 printout_dir = "sim_printouts/FourEdgeMapsBigMoreDigits/"
@@ -380,7 +468,7 @@ vth_hidden = 110            # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 
                             # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)
 
 vth_output = 280            # with 5-spike consideration: [(5-1) x 5 x tau_u, 5 x 7 x tau_u)
-                            # with 5-spike consideration: [(5-1) x 7 x tau_u, 5 x 7 x tau_u)
+                            # with 5-spike consideration: [(5-1) x 7 x tau_u, *5 x 7 x tau_u)
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
@@ -391,30 +479,45 @@ accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on 
 size_moving_window = 150    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 2500             # number of training instances per epoch
+num_instances = 10             # number of training instances per epoch
 
 ## Simulation Settings
-debug_mode = 0
+debug_mode = 1
+
+dump_training_stats = 1
+training_stat_dump_intvl = 1
+
 plot_InLatency = 0
 plot_MovingAccuracy = 1
+appendUntrainedStats = 1
+
 
 if supervised_hidden or supervised_output:
-    printout_dir = printout_dir + "Supervised/dumpsim.txt"
+    dumpsim_dir = printout_dir + "Supervised/dumpsim.txt"
 else:
-    printout_dir = printout_dir + "Inference/dumpsim.txt"
+    dumpsim_dir = printout_dir + "Inference/dumpsim.txt"
 
 if debug_mode:
-    f_handle = open(printout_dir, "w+")
+    f_handle = open(dumpsim_dir, "w+")
     f_handle.write("supervised_hidden: {}\n".format(supervised_hidden))
     f_handle.write("supervised_output: {}\n".format(supervised_output))
 else:
     f_handle = None
 
+if dump_training_stats:
+    f_handle_training_stats = open(printout_dir + "Supervised/training_stats.txt", "w+")
+    f_handle_training_stats.write("Synapse Stats during Training\n") 
 
 W_hidden = int((W_input-F_hidden) / S_hidden) + 1
+ 
 num_input_neurons = W_input**2 * num_edge_maps 
+
 num_hidden_neurons = W_hidden**2 * depth_hidden_per_sublocation
+num_fan_in_hidden = num_hidden_neurons * F_hidden**2 * num_edge_maps
+
 num_output_neurons = num_categories
+num_fan_in_output = num_output_neurons * num_hidden_neurons
+
 num_neurons = num_input_neurons + num_hidden_neurons + num_output_neurons
 
 inital_weight_input = [10] * num_input_neurons 
@@ -523,7 +626,7 @@ if len(desired_ff_neuron) != num_instances:
     exit(1)
 
 if plot_MovingAccuracy:
-    fig_accuracy, ax_acuracy = createMovingAccuracyFigure(num_instances)
+    fig_accuracy, ax_accuracy = createMovingAccuracyFigure(num_instances)
 
 ######################################################################################
 
@@ -576,7 +679,7 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        depth_causal = 4
+        depth_causal = 5
         depth_anticausal = 9
         inhibit_enable = 0
         if supervised_hidden:
@@ -787,7 +890,7 @@ for instance in range(num_instances):
                     WeightRAM=WeightRAM, 
                     moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
                     correct_cnt=correct_cnt,
-                    num_causal_output=4, num_anticausal_output=1,
+                    num_causal_output=5, num_anticausal_output=1,
                     num_causal_hidden=3, num_anticausal_hidden=3,
                     debug_mode=debug_mode
     )
@@ -802,7 +905,7 @@ for instance in range(num_instances):
     accuracy_during_training[instance] = \
         getTrainingAccuracy(moving_window)
     if plot_MovingAccuracy:
-        appendAccuracy(ax_acuracy, instance, accuracy_during_training[instance])
+        appendAccuracy(ax_accuracy, instance, accuracy_during_training[instance])
     if correct_cnt > max_correct_cnt:
         max_correct_cnt = correct_cnt
     if debug_mode:
@@ -820,6 +923,16 @@ for instance in range(num_instances):
     PotentialRAM.clearPotential()
     for i in range(num_neurons):
         sn_list[i].clearStateVariables()
+    
+    ## dump training statistics
+    if dump_training_stats and \
+            ((instance+1) % training_stat_dump_intvl) == 0:
+        getUntrainedPerc(instance=instance, WeightRAM_inst=WeightRAM, W_hidden=W_hidden,
+                         num_categories=num_categories,
+                         num_input_neurons=num_input_neurons, num_fan_in_hidden=num_fan_in_hidden,
+                         num_fan_in_output=num_fan_in_output, appendUntrainedStats=appendUntrainedStats,
+                         f_handle_training_stats=f_handle_training_stats, ax_accuracy=ax_accuracy
+                         )
 
 if debug_mode:
     f_handle.write("Maximum successive correct count:{}\n".format(max_correct_cnt))
@@ -839,6 +952,9 @@ if debug_mode:
                     .format(synapse_addr, weight_vector[synapse_addr], WeightRAM.weight[synapse_addr]))
     f_handle.write("************************************************************\n")
     f_handle.close()
+
+if f_handle_training_stats is not None:
+    f_handle_training_stats.close()
 
 print("Maximum successive correct count:{}\n".format(max_correct_cnt))
 print("End of Program!")

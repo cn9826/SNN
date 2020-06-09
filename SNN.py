@@ -334,6 +334,45 @@ class IntermapInhibitScoreboard:
                 } for i in range(len(self.scoreboard))
             ]
 
+class IntramapInhibitScoreboard:
+    def __init__(self, layer_idx, W, F_window):
+        self.layer_idx = layer_idx
+        self. W = W
+        self.num_locations = W**2
+        self. F_window = F_window
+        self.fired_location_idx = []
+        self.inhibited_idx = []
+
+    def returnInhibitedLocationIdx(self, fired_location_idx):
+        row_idx, col_idx = divmod(fired_location_idx, self.W)
+        top_indices = []
+        bottom_indices = []
+        left_indices = []
+        right_indices = []
+        for step in range(self.F_window):
+            if (fired_location_idx - step*self.W) >= 0:
+                top_indices.append(fired_location_idx - step*self.W)
+            if (fired_location_idx + step*self.W) < self.num_locations:
+                bottom_indices.append(fired_location_idx + step*self.W)
+            if (fired_location_idx - step) >= self.W * row_idx:
+                left_indices.append(fired_location_idx - step*self.W)
+            if (fired_location_idx + step) < self.W * (row_idx+1):
+                right_indices.append(fired_location_idx + step*self.W)
+        return (top_indices+left_indices+right_indices+bottom_indices)
+
+    def registerFiredLocation(self, location_idx):
+        if location_idx in self.fired_idx:
+            print("Error when Inter- and Intra-map inhibition are used together \
+                   on layer {}: location_idx {} has already been registered in Intra-map \
+                   inhibition scoreboard!".format(self.layer_idx, location_idx))
+            exit(2)
+        self.fired_location_idx.append(location_idx)
+        self.inhibited_idx.append(returnInhibitedLocationIdx(location_idx))
+
+    def clearScoreboard(self):
+        self.fired_location_idx = []
+        self.inhibited_idx = []
+
 class SpikingNeuron:   # this class can be viewed as the functional unit that updates neuron states
     # shared Class Variables
     # time step resolution w.r.t. duration
@@ -1012,8 +1051,9 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             elif not reward_signal and not isf2f:
                 if t_out != None:
                     s = t_out - t_min
-                    deltaWeight_causal = \
-                        round(A_causal * math.exp(-(s/tau_causal)))
+                    # deltaWeight_causal = \
+                    #     round(A_causal * math.exp(-(s/tau_causal)))
+                    deltaWeight_causal = A_causal
                     if anticausal_fan_in_addr != None:                    
                         deltaWeight_anticausal = \
                             round(-A_anticausal* math.exp(s/tau_anticausal))
@@ -1038,7 +1078,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                             .format(instance, oldWeight_anticausal[i], newWeight_anticausal[i], anticausal_fan_in_addr[i], self.neuron_idx, t_out))                           
 
         elif not isIntended:
-            # non-F2F P+ on the non-intended, t_ref = t_min
+            # non-F2F P+ on the non-intended, t_ref = t_min; but maybe t_ref can be t_in
             if reward_signal and not isf2f:
                 s = t_out - t_min
                 deltaWeight_causal = \
@@ -1556,7 +1596,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             oldWeight_anticausal = None
 
         newWeight_causal, newWeight_anticausal = \
-            sn_intended.RSTDP_output(
+            sn_intended.RC_output_subloc_specific(
                                     t_out=t_out,
                                     t_min=min_fire_time,
                                     instance=instance,
@@ -1634,7 +1674,7 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
         t_out = sn_nonintended.spike_out_info[0]["time"]
 
         newWeight_causal, _ = \
-            sn_nonintended.RSTDP_output(
+            sn_nonintended.RC_output_subloc_specific(
                                     t_out=t_out,
                                     t_min=min_fire_time,
                                     instance=instance,

@@ -207,8 +207,8 @@ duration = 80
 tau_u = 8
 tau_v = None
 vth_input = 1
-vth_hidden = 350    # with 9-spike consideration: [(9-1) x 5 x tau_u, *9 x 5 x tau_u)
-                    # with 9-spike consideration: [(9-1) x 7 x tau_u, 9 x 7 x tau_u)
+vth_hidden = 350    # with 4-spike consideration: [(9-1) x 5 x tau_u, 9 x 5 x tau_u)
+                    # with 4-spike consideration: [(9-1) x 7 x tau_u, *9 x 7 x tau_u)
 
 vth_output = 672    # with 12-spike consideration: [(12-1) x 5 x tau_u, 12 x 5 x tau_u)
                     # with 12-spike consideration: [(12-1) x 7 x tau_u, *12 x 7 x tau_u)
@@ -229,7 +229,7 @@ num_instances = 15000        # number of training instances from filtered-pooled
 debug_mode = 0
 
 dump_training_stats = 1
-dump_training_identifier = "Fig16"
+dump_training_identifier = "Fig21"
 training_stat_dump_intvl = 1000
 
 plot_MovingAccuracy = 1

@@ -1553,10 +1553,13 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
         # sn_hidden.spike_in_cache.writeNewWeight(fan_in_addr, newWeight)
         sn_hidden.updateWeight(fan_in_addr=fan_in_addr, WeightRAM_inst=WeightRAM, newWeight=newWeight)
 
-    def intendedUpdateRoutine(sn_intended, supervised_hidden, reward_signal, isIntended, isf2f, 
+    def intendedUpdateRoutine(sn_intended, supervised_hidden, reward_signal, isIntended, isf2f,
                                 instance, min_fire_time, f_handle,
                                 PreSynapticIdx_intended, WeightRAM,
-                                moving_accuracy, accuracy_th, output_silent=0,
+                                moving_accuracy, accuracy_th,
+                                causal_reverse_search,
+                                anticausal_reverse_search,
+                                output_silent=0,
                                 num_causal_output=num_causal_output, 
                                 num_anticausal_output=num_anticausal_output,
                                 num_causal_hidden=num_causal_hidden, 
@@ -1572,8 +1575,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                         intended_output=1,
                                          num_causal=num_causal_output,
                                          num_anticausal=num_anticausal_output,
-                                         causal_reverse_search= 0,
-                                         anticausal_reverse_search = 1,
+                                         causal_reverse_search= causal_reverse_search,
+                                         anticausal_reverse_search = anticausal_reverse_search,
                                          debug=debug_mode)
         
         causal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_causal]
@@ -1648,6 +1651,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                 instance, min_fire_time, f_handle,
                                 PreSynapticIdx_nonintended, WeightRAM,
                                 moving_accuracy, accuracy_th,
+                                causal_reverse_search,
+                                anticausal_reverse_search,
                                 num_causal_output=num_causal_output, 
                                 num_anticausal_output=num_anticausal_output,
                                 debug_mode=debug_mode):
@@ -1662,8 +1667,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                             intended_output=0,
                                             num_causal=num_causal_output,
                                             num_anticausal=num_anticausal_output,
-                                            causal_reverse_search = 0,
-                                            anticausal_reverse_search = 1,
+                                            causal_reverse_search = causal_reverse_search,
+                                            anticausal_reverse_search = anticausal_reverse_search,
                                             debug=debug_mode)
 
         causal_fan_in_addr = [entry["fired_synapse_addr"] for entry in in_spike_events_causal]
@@ -1712,12 +1717,16 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 isIntended = 1
                 isf2f = 1
                 sn_intended = sn_list[desired_ff_idx]
+                causal_reverse_search = 0
+                anticausal_reverse_search = 1
                 intendedUpdateRoutine(
                     sn_intended=sn_intended, supervised_hidden=supervised_hidden,
                     reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
                     instance=instance, min_fire_time=min_fire_time, f_handle=f_handle,
                     PreSynapticIdx_intended=PreSynapticIdx_intended, WeightRAM=WeightRAM,
-                    moving_accuracy=moving_accuracy, accuracy_th=accuracy_th
+                    moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
+                    causal_reverse_search=causal_reverse_search,
+                    anticausal_reverse_search=anticausal_reverse_search
                 )              
 
             ### Training On the non-intended non-F2F neurons            
@@ -1726,6 +1735,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal = 1
                 isIntended = 0
                 isf2f = 0
+                causal_reverse_search = 0
+                anticausal_reverse_search = 1
                 if len(non_f2f_neuron_lst) > 0:
                     for non_f2f_idx in non_f2f_neuron_lst:
                         sn_nonintended = sn_list[non_f2f_idx]
@@ -1734,7 +1745,9 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                             reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
                             instance=instance, min_fire_time=min_fire_time, f_handle=f_handle,
                             PreSynapticIdx_nonintended=PreSynapticIdx_nonintended, WeightRAM=WeightRAM,
-                            moving_accuracy=moving_accuracy, accuracy_th=accuracy_th
+                            moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
+                            causal_reverse_search=causal_reverse_search,
+                            anticausal_reverse_search=anticausal_reverse_search
                         )              
                         
         elif desired_ff_idx != f2f_neuron_idx:
@@ -1746,13 +1759,17 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal = 0
                 isf2f = 0
                 isIntended = 1
+                causal_reverse_search = 1
+                anticausal_reverse_search = 0
                 sn_intended = sn_list[desired_ff_idx]
                 intendedUpdateRoutine(
                     sn_intended=sn_intended, supervised_hidden=supervised_hidden,
                     reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
                     instance=instance, min_fire_time=min_fire_time, f_handle=f_handle,
                     PreSynapticIdx_intended=PreSynapticIdx_intended, WeightRAM=WeightRAM,
-                    moving_accuracy=moving_accuracy, accuracy_th=accuracy_th
+                    moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
+                    causal_reverse_search=causal_reverse_search,
+                    anticausal_reverse_search=anticausal_reverse_search
                 )              
                                             
             ### Training on the non-intended F2F neuron
@@ -1761,13 +1778,17 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal = 0
                 isIntended = 0
                 isf2f = 1
+                causal_reverse_search = 1
+                anticausal_reverse_search = 0
                 sn_nonintended = sn_list[f2f_neuron_idx]
                 nonintendedUpdateRoutine(
                     sn_nonintended=sn_nonintended, supervised_hidden=supervised_hidden,
                     reward_signal=reward_signal, isIntended=isIntended, isf2f=isf2f,
                     instance=instance, min_fire_time=min_fire_time, f_handle=f_handle,
                     PreSynapticIdx_nonintended=PreSynapticIdx_nonintended, WeightRAM=WeightRAM,
-                    moving_accuracy=moving_accuracy, accuracy_th=accuracy_th
+                    moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
+                    causal_reverse_search=causal_reverse_search,
+                    anticausal_reverse_search=anticausal_reverse_search
                 )              
                 
     # if none of the output layer neuron has fired
@@ -1779,6 +1800,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
             reward_signal = 0
             isf2f = 0
             isIntended = 1
+            causal_reverse_search = 0
+            anticausal_reverse_search = 1
             sn_intended = sn_list[desired_ff_idx]
             intendedUpdateRoutine(
                 sn_intended=sn_intended, supervised_hidden=supervised_hidden,
@@ -1786,7 +1809,9 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 instance=instance, min_fire_time=min_fire_time, f_handle=f_handle,
                 PreSynapticIdx_intended=PreSynapticIdx_intended, WeightRAM=WeightRAM,
                 moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
-                output_silent=1 
+                output_silent=1,
+                causal_reverse_search=causal_reverse_search,
+                anticausal_reverse_search=anticausal_reverse_search
             )              
         if debug_mode:
             f_handle.write("Instance {}: no output layer neuron has fired up until the end of forward pass\n"

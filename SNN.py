@@ -157,7 +157,39 @@ class SpikeIncache_Hidden:
                     self.mem[self.write_ptr]["weight"] = weight
                     self.mem[self.write_ptr]["causal_tag"] = 0
                     self.write_ptr += 1
-            
+
+    def writeSpikeInInfo_cyclic(self, fired_synapse_addr, time, weight):
+        # check if the causal entry has been filled
+        if self.write_ptr < self.depth_causal:
+            # if not fired
+            if not self.fired:
+                self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
+                self.mem[self.write_ptr]["time"] = time
+                self.mem[self.write_ptr]["weight"] = weight
+                self.mem[self.write_ptr]["causal_tag"] = 1
+                # then increment write_ptr
+                self.write_ptr += 1
+            else:
+                self.write_ptr = self.depth_causal
+                self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
+                self.mem[self.write_ptr]["time"] = time
+                self.mem[self.write_ptr]["weight"] = weight
+                self.mem[self.write_ptr]["causal_tag"] = 0
+                self.write_ptr += 1
+        # if causal entry has ben filled and starting to fill anti-causal entry
+        else:
+            # only fill in anti-causal if fired
+            if self.fired:
+                self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
+                self.mem[self.write_ptr]["time"] = time
+                self.mem[self.write_ptr]["weight"] = weight
+                self.mem[self.write_ptr]["causal_tag"] = 0
+                # check if write_ptr has reached the end
+                # if so then cycle to the top of anti-causal region
+                if self.write_ptr == self.depth - 1:
+                    self.write_ptr = self.depth_causal
+                else:
+                    self.write_ptr += 1
 
     def clearMem(self):
         self.write_ptr = 0
@@ -309,8 +341,9 @@ class SpikeIncache_Output:
         self.sublocation_buffer_prev = self.sublocation_buffer
 
 class IntermapInhibitScoreboard:
-    def __init__(self, layer_idx, W):
+    def __init__(self, layer_idx, W, max_allowed_slice):
         self.layer_idx = layer_idx
+        self.max_allowed_slice = max_allowed_slice
         ## scoreboard is a list of dictionary with fields "location_idx", "fired_slice_idx"
         ## of list size W**2
 
@@ -319,18 +352,28 @@ class IntermapInhibitScoreboard:
             [
                 {
                     "location_idx"      :     i,
-                    "fired_slice_idx"   :   None
+                    "fired_slice_cnt"   :     0,
+                    "fired_slice_idx"   :     [None] * self.max_allowed_slice
                 } for i in range(W**2)
             ]
     def registerFiredSlice(self, location_idx, fired_slice_idx):
-        self.scoreboard[location_idx]["fired_slice_idx"] = fired_slice_idx
+        if self.scoreboard[location_idx]["fired_slice_cnt"] >= self.max_allowed_slice:
+            print("Error when calling IntermapInhibitScoreboard.registerFiredSlice(): \
+                   location_idx {} has already registered {} slices!"
+                  .format(location_idx, self.scoreboard[location_idx]["fired_slice_cnt"]))
+            exit(3)
+        write_ptr = self.scoreboard[location_idx]["fired_slice_cnt"]
+        self.scoreboard[location_idx]["fired_slice_idx"][write_ptr] = fired_slice_idx
+        self.scoreboard[location_idx]["fired_slice_cnt"] += 1
+
 
     def clearScoreboard(self):
         self.scoreboard = \
             [
                 {
-                    "location_idx": i,
-                    "fired_slice_idx": None
+                    "location_idx":     i,
+                    "fired_slice_cnt":  0,
+                    "fired_slice_idx":  [None] * self.max_allowed_slice
                 } for i in range(len(self.scoreboard))
             ]
 
@@ -1406,7 +1449,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
 
         ## check if the neuron has been inhibited to reset
         if (self.layer_idx != 2) and (self.inhibit_enable and not self.inhibit_reset):
-            if InhibitScoreboard_inst.scoreboard[self.location_idx]["fired_slice_idx"] != None:
+            if InhibitScoreboard_inst.scoreboard[self.location_idx]["fired_slice_cnt"] \
+                == InhibitScoreboard_inst.max_allowed_slice:
                 self.inhibit_reset = 1
 
         # update synaptic current
@@ -1423,7 +1467,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                                 fired_synapse_addr = relavent_fan_in_addr
                                             )                    # weight could potentially be a list of integers
                                                                 # if processing multiple fan-in spikes at one sim_point
-            if self.layer_idx != 2:
+            if self.layer_idx == 1:
                 for i in range(len(relavent_fan_in_addr)):
                     self.spike_in_cache.writeSpikeInInfo(
                                         fired_synapse_addr=relavent_fan_in_addr[i],
@@ -1431,7 +1475,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                         weight = weight[i]
                                         )
 
-            else:
+            elif self.layer_idx == 2:
                 for i in range(len(relavent_fan_in_addr)):
                     # self.spike_in_cache.writeSpikeInInfo_loose(
                     #                     fired_synapse_addr=relavent_fan_in_addr[i],
@@ -1439,7 +1483,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     #                     time=sim_point,
                     #                     weight = weight[i]
                     #                     )
-                    self.spike_in_cache.writeSpikeInInfo(
+                    self.spike_in_cache.writeSpikeInInfo_cyclic(
                         fired_synapse_addr=relavent_fan_in_addr[i],
                         time=sim_point,
                         weight=weight[i]
@@ -1467,7 +1511,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 for entry in self.spike_out_info:
                     entry["time"] = sim_point
                 self.fire_cnt += 1
-                # notify InhibitScoreboard that the map/slice at this location has fired
+                # notify InhibitScoreboard that the slice at this location has fired
                 if self.layer_idx != 2 and self.inhibit_enable:
                     self.inhibit_reset = 1
                     InhibitScoreboard_inst.registerFiredSlice(self.location_idx, self.slice_idx)
@@ -1521,6 +1565,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                         intended_output=0,
                                         num_causal=num_causal_hidden,
                                         num_anticausal=num_anticausal_hidden,
+                                        causal_reverse_search=1,
+                                        anticausal_reverse_search=0,
                                         debug=debug_mode)
                                          
         
@@ -1759,8 +1805,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal = 0
                 isf2f = 0
                 isIntended = 1
-                causal_reverse_search = 1
-                anticausal_reverse_search = 0
+                causal_reverse_search = 0
+                anticausal_reverse_search = 1
                 sn_intended = sn_list[desired_ff_idx]
                 intendedUpdateRoutine(
                     sn_intended=sn_intended, supervised_hidden=supervised_hidden,
@@ -1778,8 +1824,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal = 0
                 isIntended = 0
                 isf2f = 1
-                causal_reverse_search = 1
-                anticausal_reverse_search = 0
+                causal_reverse_search = 0
+                anticausal_reverse_search = 1
                 sn_nonintended = sn_list[f2f_neuron_idx]
                 nonintendedUpdateRoutine(
                     sn_nonintended=sn_nonintended, supervised_hidden=supervised_hidden,

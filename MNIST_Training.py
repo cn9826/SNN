@@ -210,7 +210,7 @@ vth_input = 1
 vth_hidden = 350    # with 4-spike consideration: [(9-1) x 5 x tau_u, 9 x 5 x tau_u)
                     # with 4-spike consideration: [(9-1) x 7 x tau_u, *9 x 7 x tau_u)
 
-vth_output = 672    # with 12-spike consideration: [(12-1) x 5 x tau_u, 12 x 5 x tau_u)
+vth_output = 672   # with 12-spike consideration: [(12-1) x 5 x tau_u, 12 x 5 x tau_u)
                     # with 12-spike consideration: [(12-1) x 7 x tau_u, *12 x 7 x tau_u)
 
 ## Supervised Training Parameters
@@ -229,7 +229,7 @@ num_instances = 15000        # number of training instances from filtered-pooled
 debug_mode = 0
 
 dump_training_stats = 1
-dump_training_identifier = "Fig21"
+dump_training_identifier = "Fig_28"
 training_stat_dump_intvl = 1000
 
 plot_MovingAccuracy = 1
@@ -285,8 +285,8 @@ input_connectivity, hidden_connectivity, output_connectivity \
 ## Initialize InhibitionScoreboard
 InhibitScoreboard_lst = \
     [
-        SNN.IntermapInhibitScoreboard(0, W_input),
-        SNN.IntermapInhibitScoreboard(1, W_hidden),
+        SNN.IntermapInhibitScoreboard(0, W_input, 1),
+        SNN.IntermapInhibitScoreboard(1, W_hidden, 1),
         None
     ]
 
@@ -404,7 +404,7 @@ for neuron_idx in range(num_neurons):
 
     elif layer_idx == 2:
         depth_causal = 12
-        depth_anticausal = 24
+        depth_anticausal = 4
         inhibit_enable = 0
         if supervised_hidden:
             training_on = 1
@@ -586,7 +586,7 @@ for instance in range(num_instances):
                     WeightRAM=WeightRAM,
                     moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
                     correct_cnt=correct_cnt,
-                    num_causal_output = 12, num_anticausal_output = 6,
+                    num_causal_output = 12, num_anticausal_output = 4,
                     num_causal_hidden = 9, num_anticausal_hidden=9,
                     debug_mode=debug_mode
     )
@@ -655,3 +655,6 @@ if debug_mode:
 
 print("Maximum successive correct count:{}\n".format(max_correct_cnt))
 print("End of Program!")
+
+if plot_MovingAccuracy:
+    fig_accuracy.savefig(printout_dir+"Supervised/"+identifier,quality=100, optimize=True)

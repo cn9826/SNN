@@ -467,8 +467,8 @@ vth_input = 1
 vth_hidden = 110            # with 3-spike consideration: [(3-1) x 5 x tau_u, 3 x 5 x tau_u)
                             # with 3-spike consideration: [(3-1) x 7 x tau_u, 3 x 7 x tau_u)
 
-vth_output = 280            # with 5-spike consideration: [(5-1) x 5 x tau_u, 5 x 7 x tau_u)
-                            # with 5-spike consideration: [(5-1) x 7 x tau_u, *5 x 7 x tau_u)
+vth_output = 560            # with 10-spike consideration: [(10-1) x 5 x tau_u, 10 x 7 x tau_u)
+                            # with 10-spike consideration: [(10-1) x 7 x tau_u, *10 x 7 x tau_u)
 ## Supervised Training Parameters
 supervised_hidden = 1      # turn on/off supervised training in hidden layer
 supervised_output = 1      # turn on/off supervised training in output layer 
@@ -485,6 +485,7 @@ num_instances = 2500             # number of training instances per epoch
 debug_mode = 1
 
 dump_training_stats = 1
+identifier = "FigX"
 training_stat_dump_intvl = 100
 
 plot_InLatency = 0
@@ -541,8 +542,8 @@ input_connectivity, hidden_connectivity, output_connectivity \
 ## Initialize InhibitionScoreboard
 InhibitScoreboard_lst = \
     [
-        SNN.IntermapInhibitScoreboard(0, W_input),
-        SNN.IntermapInhibitScoreboard(1, W_hidden),
+        SNN.IntermapInhibitScoreboard(0, W_input, 2),
+        SNN.IntermapInhibitScoreboard(1, W_hidden,2),
         None
     ]
 
@@ -679,8 +680,8 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        depth_causal = 5
-        depth_anticausal = 9
+        depth_causal = 10
+        depth_anticausal = 18
         inhibit_enable = 0
         if supervised_hidden:
             training_on = 1
@@ -890,7 +891,7 @@ for instance in range(num_instances):
                     WeightRAM=WeightRAM, 
                     moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
                     correct_cnt=correct_cnt,
-                    num_causal_output=5, num_anticausal_output=1,
+                    num_causal_output=10, num_anticausal_output=2,
                     num_causal_hidden=3, num_anticausal_hidden=3,
                     debug_mode=debug_mode
     )
@@ -964,4 +965,4 @@ if plot_InLatency:
     plotInLatencyDistribution(early_latency_list, late_latency_list, tau_u, num_bins=8)
     plt.show()
 if plot_MovingAccuracy:
-    plt.show()
+    fig_accuracy.savefig(printout_dir+identifier,quality=100, optimize=True)

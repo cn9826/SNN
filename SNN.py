@@ -1436,7 +1436,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                                 fired_synapse_addr = relavent_fan_in_addr
                                             )           # weight could potentially be a list of integers
                                                         # if processing multiple fan-in spikes at one sim_point
-            if self.layer_idx != 2:
+            if self.layer_idx == 1:
                 for i in range(len(relavent_fan_in_addr)):
                     self.spike_in_cache.writeSpikeInInfo(
                                         fired_synapse_addr=relavent_fan_in_addr[i],
@@ -1444,7 +1444,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                                         weight = weight[i]
                                         )
 
-            else:
+            elif self.layer_idx == 2:
                 for i in range(len(relavent_fan_in_addr)):
                     # self.spike_in_cache.writeSpikeInInfo_loose(
                     #                     fired_synapse_addr=relavent_fan_in_addr[i],

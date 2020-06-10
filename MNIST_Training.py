@@ -229,7 +229,7 @@ num_instances = 15000        # number of training instances from filtered-pooled
 debug_mode = 0
 
 dump_training_stats = 1
-dump_training_identifier = "Fig21"
+identifier = "Fig_29"
 training_stat_dump_intvl = 1000
 
 plot_MovingAccuracy = 1
@@ -248,7 +248,7 @@ else:
 
 if dump_training_stats:
     f_handle_training_stats = open(printout_dir + "Supervised/training_stats_"+ \
-                                    dump_training_identifier + ".txt", "w+")
+                                    identifier + ".txt", "w+")
     f_handle_training_stats.write("Synapse Stats during Training\n")
 
 W_hidden = int((W_input-F_hidden) / S_hidden) + 1
@@ -414,7 +414,7 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        depth_causal = 24
+        depth_causal = 12
         depth_anticausal = 24
         inter_inhibit_enable = 0
         intra_inhibit_enable = 0
@@ -600,7 +600,7 @@ for instance in range(num_instances):
                     WeightRAM=WeightRAM,
                     moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
                     correct_cnt=correct_cnt,
-                    num_causal_output = 12, num_anticausal_output = 6,
+                    num_causal_output = 12, num_anticausal_output = 4,
                     num_causal_hidden = 9, num_anticausal_hidden=9,
                     debug_mode=debug_mode
     )
@@ -670,3 +670,6 @@ if debug_mode:
 
 print("Maximum successive correct count:{}\n".format(max_correct_cnt))
 print("End of Program!")
+
+if plot_MovingAccuracy:
+    fig_accuracy.savefig(fname=printout_dir+"Supervised/"+identifier)

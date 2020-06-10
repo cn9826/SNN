@@ -349,25 +349,25 @@ class IntramapInhibitScoreboard:
         bottom_indices = []
         left_indices = []
         right_indices = []
-        for step in range(self.F_window):
+        for step in range(1,self.F_window+1):
             if (fired_location_idx - step*self.W) >= 0:
                 top_indices.append(fired_location_idx - step*self.W)
             if (fired_location_idx + step*self.W) < self.num_locations:
                 bottom_indices.append(fired_location_idx + step*self.W)
             if (fired_location_idx - step) >= self.W * row_idx:
-                left_indices.append(fired_location_idx - step*self.W)
+                left_indices.append(fired_location_idx - step)
             if (fired_location_idx + step) < self.W * (row_idx+1):
-                right_indices.append(fired_location_idx + step*self.W)
+                right_indices.append(fired_location_idx + step)
         return (top_indices+left_indices+right_indices+bottom_indices)
 
     def registerFiredLocation(self, location_idx):
-        if location_idx in self.fired_idx:
+        if location_idx in self.fired_location_idx:
             print("Error when Inter- and Intra-map inhibition are used together \
                    on layer {}: location_idx {} has already been registered in Intra-map \
                    inhibition scoreboard!".format(self.layer_idx, location_idx))
             exit(2)
         self.fired_location_idx.append(location_idx)
-        self.inhibited_idx.append(returnInhibitedLocationIdx(location_idx))
+        self.inhibited_idx.append(self.returnInhibitedLocationIdx(location_idx))
 
     def clearScoreboard(self):
         self.fired_location_idx = []
@@ -380,8 +380,10 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
     # Specific Object Variables
 
     # Later add num_connections, preNeuron_idx, synaptic_weights etc...
-    def __init__(self, layer_idx, neuron_idx, location_idx, slice_idx, inhibit_enable, fan_in_synapse_addr, fan_out_synapse_addr, tau_u, tau_v,
-                threshold, duration, depth_causal, depth_anticausal, num_sublocations=3, spike_out_time_d_list=[],
+    def __init__(self, layer_idx, neuron_idx, location_idx, slice_idx, 
+                inter_inhibit_enable, intra_inhibit_enable, fan_in_synapse_addr, 
+                fan_out_synapse_addr, tau_u, tau_v, threshold, duration, depth_causal, depth_anticausal, 
+                num_sublocations=3, spike_out_time_d_list=[],
                 training_on=0, supervised=0):
         self.layer_idx = layer_idx
         self.inhibit_reset = 0
@@ -392,7 +394,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         self.fire_cnt = -1
         self.location_idx = location_idx
         self.slice_idx = slice_idx
-        self.inhibit_enable = inhibit_enable
+        self.inter_inhibit_enable = inter_inhibit_enable
+        self.intra_inhibit_enable = intra_inhibit_enable
         # simulation duration specified in a.u.
         self.duration = duration
         self.u = [0] * int(round(self.duration/SpikingNeuron.dt))
@@ -1387,15 +1390,20 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 newWeight[i] = clip_newWeight(newWeight=newWeight[i], max_weight=max_weight, min_weight=min_weight)
                 if debug:
                     if reward_signal and (not isf2f):
-                        f_handle.write("Instance {}: Non-F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on {} Neuron {} upon out-spike at time {}\n"
-                        .format(instance, oldWeight[i], newWeight[i], fan_in_addr[i], neuron_causal_str, self.neuron_idx, spike_out_time))                           
+                        f_handle.write("Instance {}: Non-F2F P+ update oldWeight: {} to \
+                        newWeight: {} of Synapse {} on {} Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight[i], newWeight[i], fan_in_addr[i], 
+                        neuron_causal_str, self.neuron_idx, spike_out_time))                           
                     elif (not reward_signal) and isf2f:
-                        f_handle.write("Instance {}: F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on {} Neuron {} upon out-spike at time {}\n"
-                        .format(instance, oldWeight[i], newWeight[i], fan_in_addr[i], neuron_causal_str, self.neuron_idx, spike_out_time))                           
+                        f_handle.write("Instance {}: F2F P- update oldWeight: {} to \
+                        newWeight: {} of Synapse {} on {} Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight[i], newWeight[i], fan_in_addr[i], 
+                        neuron_causal_str, self.neuron_idx, spike_out_time))                           
         return newWeight
 
-    def accumulate(self, sim_point, spike_in_info, WeightRAM_inst, instance, f_handle, InhibitScoreboard_inst,
-                   debug_mode=0
+    def accumulate(self, sim_point, spike_in_info, WeightRAM_inst, instance, f_handle, 
+                    InterInhibitScoreboard_inst=None, IntraInhibitScoreboard_inst=None, 
+                    debug_mode=0
                    ):     
         # spike_in_info is a list of dictionary 
         #   spike_in_info["fired_synapse_addr"] (a list of int)
@@ -1404,9 +1412,14 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         
         dt = SpikingNeuron.dt
 
-        ## check if the neuron has been inhibited to reset
-        if (self.layer_idx != 2) and (self.inhibit_enable and not self.inhibit_reset):
-            if InhibitScoreboard_inst.scoreboard[self.location_idx]["fired_slice_idx"] != None:
+        ## check if the neuron has been inter-map-inhibited to reset
+        if (self.layer_idx != 2) and \
+           (not self.inhibit_reset and (self.inter_inhibit_enable or self.intra_inhibit_enable)):
+            if self.inter_inhibit_enable \
+                and InterInhibitScoreboard_inst.scoreboard[self.location_idx]["fired_slice_idx"] != None:
+                self.inhibit_reset = 1
+            if self.intra_inhibit_enable \
+                and any(self.location_idx in sublist for sublist in IntraInhibitScoreboard_inst.inhibited_idx):
                 self.inhibit_reset = 1
 
         # update synaptic current
@@ -1421,8 +1434,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
             weight = SpikingNeuron.fetchWeight( self,
                                                 WeightRAM_inst,
                                                 fired_synapse_addr = relavent_fan_in_addr
-                                            )                    # weight could potentially be a list of integers
-                                                                # if processing multiple fan-in spikes at one sim_point
+                                            )           # weight could potentially be a list of integers
+                                                        # if processing multiple fan-in spikes at one sim_point
             if self.layer_idx != 2:
                 for i in range(len(relavent_fan_in_addr)):
                     self.spike_in_cache.writeSpikeInInfo(
@@ -1454,7 +1467,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
 
         # update membrane potential
         # check if neuron has reached maximaly allowed fire number
-        if (self.fire_cnt == -1) and not (self.inhibit_enable and self.inhibit_reset):
+        if (self.fire_cnt == -1) and \
+        not ((self.intra_inhibit_enable or self.inter_inhibit_enable) and self.inhibit_reset):
             if self.tau_v is not None:
                 self.v[sim_point] = (1-dt/self.tau_v) * self.v[sim_point-1] + self.u[sim_point]*dt
             else:
@@ -1467,10 +1481,16 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                 for entry in self.spike_out_info:
                     entry["time"] = sim_point
                 self.fire_cnt += 1
-                # notify InhibitScoreboard that the map/slice at this location has fired
-                if self.layer_idx != 2 and self.inhibit_enable:
+                
+                # notify InterInhibitScoreboard that the map/slice at this location has fired
+                if self.layer_idx != 2 and self.inter_inhibit_enable:
                     self.inhibit_reset = 1
-                    InhibitScoreboard_inst.registerFiredSlice(self.location_idx, self.slice_idx)
+                    InterInhibitScoreboard_inst.registerFiredSlice(self.location_idx, self.slice_idx)
+                
+                # notify IntraInhibitScoreboard that the map/slice at this location has fired
+                if self.layer_idx != 2 and self.intra_inhibit_enable:
+                    self.inhibit_reset = 1
+                    IntraInhibitScoreboard_inst.registerFiredLocation(self.location_idx)
 
                 # notify hidden neuron's spike_in_cache that this neuron has fired
                 if self.layer_idx == 1 or self.layer_idx == 2:
@@ -1759,8 +1779,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal = 0
                 isf2f = 0
                 isIntended = 1
-                causal_reverse_search = 1
-                anticausal_reverse_search = 0
+                causal_reverse_search = 0
+                anticausal_reverse_search = 1
                 sn_intended = sn_list[desired_ff_idx]
                 intendedUpdateRoutine(
                     sn_intended=sn_intended, supervised_hidden=supervised_hidden,
@@ -1778,8 +1798,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                 reward_signal = 0
                 isIntended = 0
                 isf2f = 1
-                causal_reverse_search = 1
-                anticausal_reverse_search = 0
+                causal_reverse_search = 0
+                anticausal_reverse_search = 1
                 sn_nonintended = sn_list[f2f_neuron_idx]
                 nonintendedUpdateRoutine(
                     sn_nonintended=sn_nonintended, supervised_hidden=supervised_hidden,

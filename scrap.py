@@ -317,8 +317,25 @@ arr = np.array(
     ]]
 )
 
-print(arr.shape)
 
 arr_reshaped = arr.reshape(2, 6)
 
 
+def returnInhibitedLocationIdx(fired_location_idx):
+    row_idx, col_idx = divmod(fired_location_idx, 3)
+    top_indices = []
+    bottom_indices = []
+    left_indices = []
+    right_indices = []
+    for step in range(1, 1 + 1):
+        if (fired_location_idx - step * 3) >= 0:
+            top_indices.append(fired_location_idx - step * 3)
+        if (fired_location_idx + step * 3) < 9:
+            bottom_indices.append(fired_location_idx + step * 3)
+        if (fired_location_idx - step) >= 3 * row_idx:
+            left_indices.append(fired_location_idx - step)
+        if (fired_location_idx + step) < 3 * (row_idx + 1):
+            right_indices.append(fired_location_idx + step * 3)
+    return (top_indices + left_indices + right_indices + bottom_indices)
+
+print(returnInhibitedLocationIdx(1))

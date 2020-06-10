@@ -282,11 +282,18 @@ input_connectivity, hidden_connectivity, output_connectivity \
         sheet_dir=sheet_dir
     )
 
-## Initialize InhibitionScoreboard
-InhibitScoreboard_lst = \
+## Initialize InterInhibitionScoreboard
+InterInhibitScoreboard_lst = \
     [
         SNN.IntermapInhibitScoreboard(0, W_input),
         SNN.IntermapInhibitScoreboard(1, W_hidden),
+        None
+    ]
+## Initialize IntraInhibitionScoreboard
+IntraInhibitScoreboard_lst = \
+    [
+        None,
+        SNN.IntramapInhibitScoreboard(1, W_hidden, 1),
         None
     ]
 
@@ -361,12 +368,14 @@ sn_list = [None] * num_neurons
 for neuron_idx in range(num_neurons):
     layer_idx = ConnectivityTable.layer_num[neuron_idx]
     if layer_idx == 0:
-        inhibit_enable = 0
+        inter_inhibit_enable = 0
+        intra_inhibit_enable = 0
         sn = SNN.SpikingNeuron( layer_idx=layer_idx,
                                 neuron_idx=neuron_idx,
                                 location_idx=input_connectivity[neuron_idx]["pixel_idx"],
                                 slice_idx=input_connectivity[neuron_idx]["edge_map_idx"],
-                                inhibit_enable=inhibit_enable,
+                                inter_inhibit_enable=inter_inhibit_enable,
+                                intra_inhibit_enable=intra_inhibit_enable,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
                                 fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
                                 depth_causal = 1,
@@ -381,7 +390,8 @@ for neuron_idx in range(num_neurons):
     elif layer_idx == 1:
         depth_causal = 9
         depth_anticausal = 9
-        inhibit_enable = 1
+        inter_inhibit_enable = 1
+        intra_inhibit_enable = 1
         if supervised_hidden:
             training_on = 1
             supervised = 1
@@ -389,7 +399,8 @@ for neuron_idx in range(num_neurons):
                                 neuron_idx=neuron_idx,
                                 location_idx=hidden_connectivity[neuron_idx - num_input_neurons]["sublocation_idx"],
                                 slice_idx = hidden_connectivity[neuron_idx-num_input_neurons]["depth_idx"],
-                                inhibit_enable = inhibit_enable,
+                                inter_inhibit_enable=inter_inhibit_enable,
+                                intra_inhibit_enable=intra_inhibit_enable,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
                                 fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
                                 depth_causal = depth_causal,
@@ -403,9 +414,10 @@ for neuron_idx in range(num_neurons):
                                 )
 
     elif layer_idx == 2:
-        depth_causal = 12
+        depth_causal = 24
         depth_anticausal = 24
-        inhibit_enable = 0
+        inter_inhibit_enable = 0
+        intra_inhibit_enable = 0
         if supervised_hidden:
             training_on = 1
             supervised = 1
@@ -413,7 +425,8 @@ for neuron_idx in range(num_neurons):
                                 neuron_idx=neuron_idx,
                                 location_idx=None,
                                 slice_idx = None,
-                                inhibit_enable = inhibit_enable,
+                                inter_inhibit_enable=inter_inhibit_enable,
+                                intra_inhibit_enable=intra_inhibit_enable,
                                 fan_in_synapse_addr=ConnectivityTable.fan_in_synapse_addr[neuron_idx],
                                 fan_out_synapse_addr=ConnectivityTable.fan_out_synapse_addr[neuron_idx],
                                 depth_causal = depth_causal,
@@ -503,13 +516,14 @@ for instance in range(num_instances):
 
         for i in range(num_neurons):
             sn_list[i].accumulate(sim_point=sim_point,
-                                    spike_in_info=spike_info[sim_point],
-                                    WeightRAM_inst=WeightRAM,
-                                    instance=instance,
-                                    f_handle=f_handle,
-                                    InhibitScoreboard_inst=InhibitScoreboard_lst[sn_list[i].layer_idx],
-                                    debug_mode=debug_mode
-                                    )
+                                spike_in_info=spike_info[sim_point],
+                                WeightRAM_inst=WeightRAM,
+                                instance=instance,
+                                f_handle=f_handle,
+                                InterInhibitScoreboard_inst=InterInhibitScoreboard_lst[sn_list[i].layer_idx],
+                                IntraInhibitScoreboard_inst=IntraInhibitScoreboard_lst[sn_list[i].layer_idx],
+                                debug_mode=debug_mode
+                                )
             # upadate the current potential to PotentialRAM
             PotentialRAM.potential[i] = sn_list[i].v[sim_point]
 
@@ -617,8 +631,9 @@ for instance in range(num_instances):
         break
 
     ## clear the state varaibles of sn_list and PotentialRAM
-    InhibitScoreboard_lst[0].clearScoreboard()
-    InhibitScoreboard_lst[1].clearScoreboard()
+    InterInhibitScoreboard_lst[0].clearScoreboard()
+    InterInhibitScoreboard_lst[1].clearScoreboard()
+    IntraInhibitScoreboard_lst[1].clearScoreboard()
     PotentialRAM.clearPotential()
     for i in range(num_neurons):
         sn_list[i].clearStateVariables()

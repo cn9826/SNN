@@ -229,7 +229,7 @@ num_instances = 15000        # number of training instances from filtered-pooled
 debug_mode = 0
 
 dump_training_stats = 1
-identifier = "Fig_29"
+identifier = "Fig_34"
 training_stat_dump_intvl = 1000
 
 plot_MovingAccuracy = 1
@@ -285,8 +285,8 @@ input_connectivity, hidden_connectivity, output_connectivity \
 ## Initialize InterInhibitionScoreboard
 InterInhibitScoreboard_lst = \
     [
-        SNN.IntermapInhibitScoreboard(0, W_input),
-        SNN.IntermapInhibitScoreboard(1, W_hidden),
+        SNN.IntermapInhibitScoreboard(0, W_input, 2),
+        SNN.IntermapInhibitScoreboard(1, W_hidden, 2),
         None
     ]
 ## Initialize IntraInhibitionScoreboard
@@ -415,7 +415,7 @@ for neuron_idx in range(num_neurons):
 
     elif layer_idx == 2:
         depth_causal = 12
-        depth_anticausal = 24
+        depth_anticausal = 4
         inter_inhibit_enable = 0
         intra_inhibit_enable = 0
         if supervised_hidden:

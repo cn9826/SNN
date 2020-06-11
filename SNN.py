@@ -822,7 +822,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     newWeight = oldWeight + round(deltaWeight)
                     newWeight = clip_newWeight(newWeight=newWeight, max_weight=max_weight, min_weight=min_weight)
                     if debug:
-                        f_handle.write("Instance {}: F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        f_handle.write("Instance {}: F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} \
+                        on Neuron {} upon out-spike at time {}\n"
                         .format(instance, oldWeight, newWeight, causal_fan_in_addr, self.neuron_idx, spike_out_time))                           
                 # F2F P- punishment quadrant
                 else:
@@ -845,8 +846,9 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     newWeight = clip_newWeight(newWeight=newWeight, max_weight=max_weight, min_weight=min_weight)
 
                     if debug:
-                        f_handle.write("Instance {}: F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                        .format(instance, oldWeight, newWeight, causal_fan_in_addr, self.neuron_idx, spike_out_time))                           
+                        f_handle.write("Instance {}: F2F P- update oldWeight: {} to newWeight: {} of Synapse {} \
+                        on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight, newWeight, causal_fan_in_addr, self.neuron_idx, spike_out_time)                         )                           
 
             # weight update for non-f2f neuron that fired within separation window, t_ref = t_first-spike
             else:
@@ -871,8 +873,9 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     newWeight = clip_newWeight(newWeight=newWeight, max_weight=max_weight, min_weight=min_weight)
 
                     if debug:
-                        f_handle.write("Instance {}: Non-F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
-                        .format(instance, oldWeight, newWeight, causal_fan_in_addr, self.neuron_idx, spike_out_time))                           
+                        f_handle.write("Instance {}: Non-F2F P+ update oldWeight: {} to newWeight: {} of \
+                        Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        .format(instance, oldWeight, newWeight, causal_fan_in_addr, self.neuron_idx, spike_out_time)                            )                           
                 
                 # weight update for non-f2f neuron but is intended that fired within separation window under punishment
                 elif not reward_signal and isIntended:
@@ -899,7 +902,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     newWeight = oldWeight + round(deltaWeight)
                     newWeight = clip_newWeight(newWeight=newWeight, max_weight=max_weight, min_weight=min_weight)
                     if debug:
-                        f_handle.write("Instance {}: Non-F2F P- update oldWeight: {} to newWeight: {} of Synapse {} on Neuron {} upon out-spike at time {}\n"
+                        f_handle.write("Instance {}: Non-F2F P- update oldWeight: {} to newWeight: {} of \
+                        Synapse {} on Neuron {} upon out-spike at time {}\n"
                         .format(instance, oldWeight, newWeight, causal_fan_in_addr, self.neuron_idx, spike_out_time))                           
             
             return newWeight 
@@ -1041,7 +1045,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     reward_signal, isf2f, isIntended,
                     moving_accuracy, accuracy_th,
                     A_causal_coarse=2, A_causal_fine=1, tau_causal=50,
-                    A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=30,
+                    A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=50,
                     max_weight=7, min_weight=-8, deltaWeight_causal_default=2, deltaWeight_anticausal_default=1,
                     debug=0): 
         if moving_accuracy >= accuracy_th:   # determine A

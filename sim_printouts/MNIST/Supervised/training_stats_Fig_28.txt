@@ -1,0 +1,58 @@
+Synapse Stats during Training
+--------------Instance 999------------------------------
+10/06/2020 21:58:44
+Total untrained Synapse Percentage:18.41%
+
+Untrained Fan-in Synapse in Hidden layer:18.13%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 2.42%
+location_idx:  1		Untrained Percentage: 0.93%
+location_idx:  2		Untrained Percentage: 0.14%
+location_idx:  3		Untrained Percentage: 0.05%
+location_idx:  4		Untrained Percentage: 0.22%
+location_idx:  5		Untrained Percentage: 1.67%
+location_idx:  6		Untrained Percentage: 1.54%
+location_idx:  7		Untrained Percentage: 0.12%
+location_idx:  8		Untrained Percentage: 0.02%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.01%
+location_idx: 11		Untrained Percentage: 0.30%
+location_idx: 12		Untrained Percentage: 1.50%
+location_idx: 13		Untrained Percentage: 0.04%
+location_idx: 14		Untrained Percentage: 0.01%
+location_idx: 15		Untrained Percentage: 0.02%
+location_idx: 16		Untrained Percentage: 0.03%
+location_idx: 17		Untrained Percentage: 0.32%
+location_idx: 18		Untrained Percentage: 1.45%
+location_idx: 19		Untrained Percentage: 0.02%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.52%
+location_idx: 24		Untrained Percentage: 1.37%
+location_idx: 25		Untrained Percentage: 0.06%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.01%
+location_idx: 28		Untrained Percentage: 0.05%
+location_idx: 29		Untrained Percentage: 0.73%
+location_idx: 30		Untrained Percentage: 2.00%
+location_idx: 31		Untrained Percentage: 0.12%
+location_idx: 32		Untrained Percentage: 0.02%
+location_idx: 33		Untrained Percentage: 0.05%
+location_idx: 34		Untrained Percentage: 0.27%
+location_idx: 35		Untrained Percentage: 2.16%
+
+Untrained Fan-in Synapse in Output layer:19.42%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 2.25%
+location_idx:  1		Untrained Percentage: 2.61%
+location_idx:  2		Untrained Percentage: 1.61%
+location_idx:  3		Untrained Percentage: 2.08%
+location_idx:  4		Untrained Percentage: 1.61%
+location_idx:  5		Untrained Percentage: 1.67%
+location_idx:  6		Untrained Percentage: 1.72%
+location_idx:  7		Untrained Percentage: 1.83%
+location_idx:  8		Untrained Percentage: 1.94%
+location_idx:  9		Untrained Percentage: 2.08%
+----------------------------------------------------
+

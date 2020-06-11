@@ -1580,6 +1580,8 @@ def combined_RSTDP_BRRC(sn_list, instance, inference_correct, num_fired_output,
                                         intended_output=0,
                                         num_causal=num_causal_hidden,
                                         num_anticausal=num_anticausal_hidden,
+                                        causal_reverse_search = 1,
+                                        anticausal_reverse_search = 0,
                                         debug=debug_mode)
                                          
         

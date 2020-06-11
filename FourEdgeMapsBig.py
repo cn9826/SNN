@@ -479,7 +479,7 @@ accuracy_th = 0.8           # the coarse/fine cutoff for weight update based on 
 size_moving_window = 150    # the size of moving window that dynamically calculates inference accuracy during training
 
 ## Training Dataset Parameters
-num_instances = 1             # number of training instances per epoch
+num_instances = 2500             # number of training instances per epoch
 
 ## Simulation Settings
 debug_mode = 1
@@ -488,8 +488,8 @@ dump_training_stats = 1
 training_stat_dump_intvl = 100
 
 plot_InLatency = 0
-plot_MovingAccuracy = 0
-appendUntrainedStats = 0
+plot_MovingAccuracy = 1
+appendUntrainedStats = 1
 
 
 if supervised_hidden or supervised_output:
@@ -541,8 +541,8 @@ input_connectivity, hidden_connectivity, output_connectivity \
 ## Initialize InterInhibitionScoreboard
 InterInhibitScoreboard_lst = \
     [
-        SNN.IntermapInhibitScoreboard(0, W_input),
-        SNN.IntermapInhibitScoreboard(1, W_hidden),
+        SNN.IntermapInhibitScoreboard(0, W_input, 2),
+        SNN.IntermapInhibitScoreboard(1, W_hidden, 2),
         None
     ]
 ## Initialize IntraInhibitionScoreboard
@@ -691,7 +691,7 @@ for neuron_idx in range(num_neurons):
 
     elif layer_idx == 2:
         depth_causal = 5
-        depth_anticausal = 9
+        depth_anticausal = 1
         inter_inhibit_enable = 0
         intra_inhibit_enable = 0
         if supervised_hidden:
@@ -932,9 +932,9 @@ for instance in range(num_instances):
         break
     
     ## clear the state varaibles of sn_list, PotentialRAM and InhibitScoreboard
-    # InterInhibitScoreboard_lst[0].clearScoreboard()
-    # InterInhibitScoreboard_lst[1].clearScoreboard()
-    # IntraInhibitScoreboard_lst[1].clearScoreboard()
+    InterInhibitScoreboard_lst[0].clearScoreboard()
+    InterInhibitScoreboard_lst[1].clearScoreboard()
+    IntraInhibitScoreboard_lst[1].clearScoreboard()
     PotentialRAM.clearPotential()
     for i in range(num_neurons):
         sn_list[i].clearStateVariables()

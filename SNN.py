@@ -158,6 +158,37 @@ class SpikeIncache_Hidden:
                     self.mem[self.write_ptr]["causal_tag"] = 0
                     self.write_ptr += 1
             
+    def writeSpikeInInfo_cyclic(self, fired_synapse_addr, time, weight):
+        # check if the causal entry has been filled
+        if self.write_ptr < self.depth_causal:
+            # if not fired
+            if not self.fired:
+                self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
+                self.mem[self.write_ptr]["time"] = time
+                self.mem[self.write_ptr]["weight"] = weight
+                self.mem[self.write_ptr]["causal_tag"] = 1
+                # then increment write_ptr
+                self.write_ptr += 1
+            else:
+                self.write_ptr = self.depth_causal
+                self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
+                self.mem[self.write_ptr]["time"] = time
+                self.mem[self.write_ptr]["weight"] = weight
+                self.mem[self.write_ptr]["causal_tag"] = 0
+                self.write_ptr += 1
+        else:
+            # only fill in anti-causal if fired
+            if self.fired:
+                self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
+                self.mem[self.write_ptr]["time"] = time
+                self.mem[self.write_ptr]["weight"] = weight
+                self.mem[self.write_ptr]["causal_tag"] = 0
+                # check if write_ptr has reached the end
+                # if so then cycle to the top of anti-causal region
+                if self.write_ptr == self.depth - 1:
+                    self.write_ptr = self.depth_causal
+                else:
+                    self.write_ptr += 1
 
     def clearMem(self):
         self.write_ptr = 0
@@ -309,8 +340,9 @@ class SpikeIncache_Output:
         self.sublocation_buffer_prev = self.sublocation_buffer
 
 class IntermapInhibitScoreboard:
-    def __init__(self, layer_idx, W):
+    def __init__(self, layer_idx, W, max_allowed_slice):
         self.layer_idx = layer_idx
+        self.max_allowed_slice = max_allowed_slice
         ## scoreboard is a list of dictionary with fields "location_idx", "fired_slice_idx"
         ## of list size W**2
 
@@ -318,19 +350,30 @@ class IntermapInhibitScoreboard:
         self.scoreboard = \
             [
                 {
-                    "location_idx"      :     i,
-                    "fired_slice_idx"   :   None
+                    "location_idx"      :   i,
+                    "fired_slice_cnt"   :   0,
+                    "fired_slice_idx"   :   [None] * self.max_allowed_slice
                 } for i in range(W**2)
             ]
     def registerFiredSlice(self, location_idx, fired_slice_idx):
-        self.scoreboard[location_idx]["fired_slice_idx"] = fired_slice_idx
+        if self.scoreboard[location_idx]["fired_slice_cnt"] >= self.max_allowed_slice:
+            print("Error when calling IntermapInhibitScoreboard.registerFiredSlice(): \
+                   location_idx {} has already registered {} slices!"
+                  .format(location_idx, self.scoreboard[location_idx]["fired_slice_cnt"]))
+            exit(3)
+            write_ptr = self.scoreboard[location_idx]["fired_slice_cnt"]
+            self.scoreboard[location_idx]["fired_slice_idx"][write_ptr] = fired_slice_idx
+            self.scoreboard[location_idx]["fired_slice_cnt"] += 1
+
+
 
     def clearScoreboard(self):
         self.scoreboard = \
             [
                 {
-                    "location_idx": i,
-                    "fired_slice_idx": None
+                    "location_idx":     i,
+                    "fired_slice_cnt":  0,
+                    "fired_slice_idx":  [None] * self.max_allowed_slice
                 } for i in range(len(self.scoreboard))
             ]
 
@@ -361,11 +404,6 @@ class IntramapInhibitScoreboard:
         return (top_indices+left_indices+right_indices+bottom_indices)
 
     def registerFiredLocation(self, location_idx):
-        if location_idx in self.fired_location_idx:
-            print("Error when Inter- and Intra-map inhibition are used together \
-                   on layer {}: location_idx {} has already been registered in Intra-map \
-                   inhibition scoreboard!".format(self.layer_idx, location_idx))
-            exit(2)
         self.fired_location_idx.append(location_idx)
         self.inhibited_idx.append(self.returnInhibitedLocationIdx(location_idx))
 
@@ -1182,8 +1220,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                         elif kernel == "rectangle":
                             deltaWeight_causal = A_causal
                     else:
-                        print("Warning: Instance {}: Intended F2F Output Neuron is updating on a \
-                            causal event but tag_causal is not \"1\""
+                        print("Warning: Instance {}: Intended F2F Output Neuron is updating on a" \
+                            "causal event but tag_causal is not \"1\""
                               .format(instance))
                         exit(1)
 
@@ -1197,16 +1235,16 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                             elif kernel == "rectangle":
                                 deltaWeight_anticausal = -A_anticausal
                         else:
-                            print("Warning: Instance {}: Intended F2F Output Neuron is updating on an \
-                                anti-causal event but tag_causal is not \"0\""
+                            print("Warning: Instance {}: Intended F2F Output Neuron is updating on an" \
+                                "anti-causal event but tag_causal is not \"0\""
                                   .format(instance))
                             exit(1)
                         newWeight_anticausal[i] = oldWeight_anticausal[i] + deltaWeight_anticausal
                         newWeight_anticausal[i] = clip_newWeight(newWeight_anticausal[i], max_weight, min_weight)
                         if debug:
                             f_handle.write(
-                                "Instance {}: anti-Causal F2F P+ update oldWeight: {} to newWeight: {} of Synapse {} \
-                                on Neuron {} upon out-spike at time {}\n"
+                                "Instance {}: anti-Causal F2F P+ update oldWeight: {} to newWeight: {} of Synapse {}" \
+                                "on Neuron {} upon out-spike at time {}\n"
                                 .format(instance, oldWeight_anticausal[i], newWeight_anticausal[i],
                                         anticausal_fan_in_addr[i], self.neuron_idx, t_out))
 
@@ -1261,8 +1299,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                         elif kernel == "rectangle":
                             deltaWeight_causal = -A_causal
                     else:
-                        print("Warning: Instance {}: Non-Intended F2F Output Neuron is updating on a \
-                            causal event but tag_causal is not \"1\""
+                        print("Warning: Instance {}: Non-Intended F2F Output Neuron is updating on a" \
+                            "causal event but tag_causal is not \"1\""
                               .format(instance))
                         exit(1)
                     newWeight_causal[i] = oldWeight_causal[i] + deltaWeight_causal
@@ -1416,7 +1454,8 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
         if (self.layer_idx != 2) and \
            (not self.inhibit_reset and (self.inter_inhibit_enable or self.intra_inhibit_enable)):
             if self.inter_inhibit_enable \
-                and InterInhibitScoreboard_inst.scoreboard[self.location_idx]["fired_slice_idx"] != None:
+                and InterInhibitScoreboard_inst.scoreboard[self.location_idx]["fired_slice_cnt"] \
+                    == InterInhibitScoreboard_inst.max_allowed_slice:
                 self.inhibit_reset = 1
             if self.intra_inhibit_enable \
                 and any(self.location_idx in sublist for sublist in IntraInhibitScoreboard_inst.inhibited_idx):
@@ -1452,7 +1491,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     #                     time=sim_point,
                     #                     weight = weight[i]
                     #                     )
-                    self.spike_in_cache.writeSpikeInInfo(
+                    self.spike_in_cache.writeSpikeInInfo_cyclic(
                         fired_synapse_addr=relavent_fan_in_addr[i],
                         time=sim_point,
                         weight=weight[i]

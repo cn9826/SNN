@@ -1,0 +1,856 @@
+Synapse Stats during Training
+--------------Instance 999------------------------------
+11/06/2020 14:45:33
+Total untrained Synapse Percentage:13.16%
+
+Untrained Fan-in Synapse in Hidden layer:12.78%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 2.04%
+location_idx:  1		Untrained Percentage: 0.96%
+location_idx:  2		Untrained Percentage: 0.17%
+location_idx:  3		Untrained Percentage: 0.08%
+location_idx:  4		Untrained Percentage: 0.13%
+location_idx:  5		Untrained Percentage: 0.96%
+location_idx:  6		Untrained Percentage: 1.15%
+location_idx:  7		Untrained Percentage: 0.13%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.01%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.20%
+location_idx: 12		Untrained Percentage: 0.90%
+location_idx: 13		Untrained Percentage: 0.02%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.01%
+location_idx: 17		Untrained Percentage: 0.27%
+location_idx: 18		Untrained Percentage: 0.77%
+location_idx: 19		Untrained Percentage: 0.04%
+location_idx: 20		Untrained Percentage: 0.02%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.25%
+location_idx: 24		Untrained Percentage: 0.42%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.02%
+location_idx: 28		Untrained Percentage: 0.02%
+location_idx: 29		Untrained Percentage: 0.64%
+location_idx: 30		Untrained Percentage: 1.49%
+location_idx: 31		Untrained Percentage: 0.13%
+location_idx: 32		Untrained Percentage: 0.03%
+location_idx: 33		Untrained Percentage: 0.02%
+location_idx: 34		Untrained Percentage: 0.18%
+location_idx: 35		Untrained Percentage: 1.71%
+
+Untrained Fan-in Synapse in Output layer:14.56%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 1.61%
+location_idx:  1		Untrained Percentage: 2.28%
+location_idx:  2		Untrained Percentage: 1.11%
+location_idx:  3		Untrained Percentage: 1.61%
+location_idx:  4		Untrained Percentage: 1.25%
+location_idx:  5		Untrained Percentage: 1.08%
+location_idx:  6		Untrained Percentage: 1.31%
+location_idx:  7		Untrained Percentage: 1.36%
+location_idx:  8		Untrained Percentage: 1.42%
+location_idx:  9		Untrained Percentage: 1.53%
+----------------------------------------------------
+
+--------------Instance 1999------------------------------
+11/06/2020 15:26:16
+Total untrained Synapse Percentage:6.13%
+
+Untrained Fan-in Synapse in Hidden layer:6.19%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 1.67%
+location_idx:  1		Untrained Percentage: 0.29%
+location_idx:  2		Untrained Percentage: 0.08%
+location_idx:  3		Untrained Percentage: 0.07%
+location_idx:  4		Untrained Percentage: 0.08%
+location_idx:  5		Untrained Percentage: 0.41%
+location_idx:  6		Untrained Percentage: 0.36%
+location_idx:  7		Untrained Percentage: 0.08%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.09%
+location_idx: 12		Untrained Percentage: 0.33%
+location_idx: 13		Untrained Percentage: 0.01%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.16%
+location_idx: 18		Untrained Percentage: 0.27%
+location_idx: 19		Untrained Percentage: 0.01%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.13%
+location_idx: 24		Untrained Percentage: 0.19%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.01%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.16%
+location_idx: 30		Untrained Percentage: 0.62%
+location_idx: 31		Untrained Percentage: 0.04%
+location_idx: 32		Untrained Percentage: 0.02%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.11%
+location_idx: 35		Untrained Percentage: 1.01%
+
+Untrained Fan-in Synapse in Output layer:5.92%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.47%
+location_idx:  1		Untrained Percentage: 1.44%
+location_idx:  2		Untrained Percentage: 0.31%
+location_idx:  3		Untrained Percentage: 0.53%
+location_idx:  4		Untrained Percentage: 0.36%
+location_idx:  5		Untrained Percentage: 0.44%
+location_idx:  6		Untrained Percentage: 0.50%
+location_idx:  7		Untrained Percentage: 0.61%
+location_idx:  8		Untrained Percentage: 0.56%
+location_idx:  9		Untrained Percentage: 0.69%
+----------------------------------------------------
+
+--------------Instance 2999------------------------------
+11/06/2020 16:09:00
+Total untrained Synapse Percentage:3.79%
+
+Untrained Fan-in Synapse in Hidden layer:4.02%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 1.25%
+location_idx:  1		Untrained Percentage: 0.27%
+location_idx:  2		Untrained Percentage: 0.07%
+location_idx:  3		Untrained Percentage: 0.04%
+location_idx:  4		Untrained Percentage: 0.08%
+location_idx:  5		Untrained Percentage: 0.31%
+location_idx:  6		Untrained Percentage: 0.21%
+location_idx:  7		Untrained Percentage: 0.04%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.08%
+location_idx: 12		Untrained Percentage: 0.25%
+location_idx: 13		Untrained Percentage: 0.01%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.15%
+location_idx: 18		Untrained Percentage: 0.17%
+location_idx: 19		Untrained Percentage: 0.01%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.07%
+location_idx: 24		Untrained Percentage: 0.13%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.11%
+location_idx: 30		Untrained Percentage: 0.26%
+location_idx: 31		Untrained Percentage: 0.02%
+location_idx: 32		Untrained Percentage: 0.01%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.09%
+location_idx: 35		Untrained Percentage: 0.40%
+
+Untrained Fan-in Synapse in Output layer:2.94%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.17%
+location_idx:  1		Untrained Percentage: 1.00%
+location_idx:  2		Untrained Percentage: 0.19%
+location_idx:  3		Untrained Percentage: 0.19%
+location_idx:  4		Untrained Percentage: 0.17%
+location_idx:  5		Untrained Percentage: 0.17%
+location_idx:  6		Untrained Percentage: 0.22%
+location_idx:  7		Untrained Percentage: 0.31%
+location_idx:  8		Untrained Percentage: 0.17%
+location_idx:  9		Untrained Percentage: 0.36%
+----------------------------------------------------
+
+--------------Instance 3999------------------------------
+11/06/2020 16:53:55
+Total untrained Synapse Percentage:3.12%
+
+Untrained Fan-in Synapse in Hidden layer:3.38%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 1.23%
+location_idx:  1		Untrained Percentage: 0.22%
+location_idx:  2		Untrained Percentage: 0.05%
+location_idx:  3		Untrained Percentage: 0.02%
+location_idx:  4		Untrained Percentage: 0.05%
+location_idx:  5		Untrained Percentage: 0.25%
+location_idx:  6		Untrained Percentage: 0.15%
+location_idx:  7		Untrained Percentage: 0.02%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.07%
+location_idx: 12		Untrained Percentage: 0.21%
+location_idx: 13		Untrained Percentage: 0.01%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.09%
+location_idx: 18		Untrained Percentage: 0.14%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.05%
+location_idx: 24		Untrained Percentage: 0.08%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.10%
+location_idx: 30		Untrained Percentage: 0.22%
+location_idx: 31		Untrained Percentage: 0.02%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.07%
+location_idx: 35		Untrained Percentage: 0.32%
+
+Untrained Fan-in Synapse in Output layer:2.17%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.17%
+location_idx:  1		Untrained Percentage: 0.78%
+location_idx:  2		Untrained Percentage: 0.08%
+location_idx:  3		Untrained Percentage: 0.14%
+location_idx:  4		Untrained Percentage: 0.11%
+location_idx:  5		Untrained Percentage: 0.14%
+location_idx:  6		Untrained Percentage: 0.11%
+location_idx:  7		Untrained Percentage: 0.31%
+location_idx:  8		Untrained Percentage: 0.11%
+location_idx:  9		Untrained Percentage: 0.22%
+----------------------------------------------------
+
+--------------Instance 4999------------------------------
+11/06/2020 17:40:37
+Total untrained Synapse Percentage:2.55%
+
+Untrained Fan-in Synapse in Hidden layer:2.74%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 1.11%
+location_idx:  1		Untrained Percentage: 0.19%
+location_idx:  2		Untrained Percentage: 0.03%
+location_idx:  3		Untrained Percentage: 0.01%
+location_idx:  4		Untrained Percentage: 0.02%
+location_idx:  5		Untrained Percentage: 0.21%
+location_idx:  6		Untrained Percentage: 0.15%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.05%
+location_idx: 12		Untrained Percentage: 0.13%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.06%
+location_idx: 18		Untrained Percentage: 0.10%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.04%
+location_idx: 24		Untrained Percentage: 0.07%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.05%
+location_idx: 30		Untrained Percentage: 0.21%
+location_idx: 31		Untrained Percentage: 0.02%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.07%
+location_idx: 35		Untrained Percentage: 0.22%
+
+Untrained Fan-in Synapse in Output layer:1.86%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.17%
+location_idx:  1		Untrained Percentage: 0.64%
+location_idx:  2		Untrained Percentage: 0.08%
+location_idx:  3		Untrained Percentage: 0.11%
+location_idx:  4		Untrained Percentage: 0.08%
+location_idx:  5		Untrained Percentage: 0.11%
+location_idx:  6		Untrained Percentage: 0.11%
+location_idx:  7		Untrained Percentage: 0.28%
+location_idx:  8		Untrained Percentage: 0.08%
+location_idx:  9		Untrained Percentage: 0.19%
+----------------------------------------------------
+
+--------------Instance 5999------------------------------
+11/06/2020 18:29:30
+Total untrained Synapse Percentage:2.35%
+
+Untrained Fan-in Synapse in Hidden layer:2.54%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 1.06%
+location_idx:  1		Untrained Percentage: 0.19%
+location_idx:  2		Untrained Percentage: 0.02%
+location_idx:  3		Untrained Percentage: 0.01%
+location_idx:  4		Untrained Percentage: 0.02%
+location_idx:  5		Untrained Percentage: 0.19%
+location_idx:  6		Untrained Percentage: 0.13%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.05%
+location_idx: 12		Untrained Percentage: 0.10%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.06%
+location_idx: 18		Untrained Percentage: 0.08%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.04%
+location_idx: 24		Untrained Percentage: 0.05%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.04%
+location_idx: 30		Untrained Percentage: 0.19%
+location_idx: 31		Untrained Percentage: 0.02%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.05%
+location_idx: 35		Untrained Percentage: 0.22%
+
+Untrained Fan-in Synapse in Output layer:1.67%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.17%
+location_idx:  1		Untrained Percentage: 0.64%
+location_idx:  2		Untrained Percentage: 0.08%
+location_idx:  3		Untrained Percentage: 0.08%
+location_idx:  4		Untrained Percentage: 0.08%
+location_idx:  5		Untrained Percentage: 0.08%
+location_idx:  6		Untrained Percentage: 0.08%
+location_idx:  7		Untrained Percentage: 0.22%
+location_idx:  8		Untrained Percentage: 0.08%
+location_idx:  9		Untrained Percentage: 0.14%
+----------------------------------------------------
+
+--------------Instance 6999------------------------------
+11/06/2020 19:20:03
+Total untrained Synapse Percentage:1.89%
+
+Untrained Fan-in Synapse in Hidden layer:2.05%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 0.66%
+location_idx:  1		Untrained Percentage: 0.15%
+location_idx:  2		Untrained Percentage: 0.02%
+location_idx:  3		Untrained Percentage: 0.01%
+location_idx:  4		Untrained Percentage: 0.02%
+location_idx:  5		Untrained Percentage: 0.19%
+location_idx:  6		Untrained Percentage: 0.11%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.05%
+location_idx: 12		Untrained Percentage: 0.10%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.06%
+location_idx: 18		Untrained Percentage: 0.08%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.04%
+location_idx: 24		Untrained Percentage: 0.05%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.04%
+location_idx: 30		Untrained Percentage: 0.19%
+location_idx: 31		Untrained Percentage: 0.01%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.05%
+location_idx: 35		Untrained Percentage: 0.22%
+
+Untrained Fan-in Synapse in Output layer:1.31%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.14%
+location_idx:  1		Untrained Percentage: 0.58%
+location_idx:  2		Untrained Percentage: 0.03%
+location_idx:  3		Untrained Percentage: 0.06%
+location_idx:  4		Untrained Percentage: 0.06%
+location_idx:  5		Untrained Percentage: 0.06%
+location_idx:  6		Untrained Percentage: 0.06%
+location_idx:  7		Untrained Percentage: 0.19%
+location_idx:  8		Untrained Percentage: 0.06%
+location_idx:  9		Untrained Percentage: 0.08%
+----------------------------------------------------
+
+--------------Instance 7999------------------------------
+11/06/2020 20:12:29
+Total untrained Synapse Percentage:1.58%
+
+Untrained Fan-in Synapse in Hidden layer:1.73%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 0.58%
+location_idx:  1		Untrained Percentage: 0.14%
+location_idx:  2		Untrained Percentage: 0.01%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.02%
+location_idx:  5		Untrained Percentage: 0.19%
+location_idx:  6		Untrained Percentage: 0.10%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.05%
+location_idx: 12		Untrained Percentage: 0.09%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.05%
+location_idx: 18		Untrained Percentage: 0.05%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.03%
+location_idx: 24		Untrained Percentage: 0.03%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.04%
+location_idx: 30		Untrained Percentage: 0.13%
+location_idx: 31		Untrained Percentage: 0.01%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.02%
+location_idx: 35		Untrained Percentage: 0.19%
+
+Untrained Fan-in Synapse in Output layer:1.03%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.08%
+location_idx:  1		Untrained Percentage: 0.53%
+location_idx:  2		Untrained Percentage: 0.03%
+location_idx:  3		Untrained Percentage: 0.03%
+location_idx:  4		Untrained Percentage: 0.06%
+location_idx:  5		Untrained Percentage: 0.03%
+location_idx:  6		Untrained Percentage: 0.03%
+location_idx:  7		Untrained Percentage: 0.19%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.06%
+----------------------------------------------------
+
+--------------Instance 8999------------------------------
+11/06/2020 21:07:09
+Total untrained Synapse Percentage:1.18%
+
+Untrained Fan-in Synapse in Hidden layer:1.30%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 0.31%
+location_idx:  1		Untrained Percentage: 0.10%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.02%
+location_idx:  5		Untrained Percentage: 0.17%
+location_idx:  6		Untrained Percentage: 0.09%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.02%
+location_idx: 12		Untrained Percentage: 0.09%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.04%
+location_idx: 18		Untrained Percentage: 0.05%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.03%
+location_idx: 24		Untrained Percentage: 0.02%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.04%
+location_idx: 30		Untrained Percentage: 0.12%
+location_idx: 31		Untrained Percentage: 0.01%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.00%
+location_idx: 35		Untrained Percentage: 0.18%
+
+Untrained Fan-in Synapse in Output layer:0.75%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.06%
+location_idx:  1		Untrained Percentage: 0.47%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.03%
+location_idx:  5		Untrained Percentage: 0.00%
+location_idx:  6		Untrained Percentage: 0.00%
+location_idx:  7		Untrained Percentage: 0.14%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.06%
+----------------------------------------------------
+
+--------------Instance 9999------------------------------
+11/06/2020 22:03:38
+Total untrained Synapse Percentage:1.10%
+
+Untrained Fan-in Synapse in Hidden layer:1.22%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 0.28%
+location_idx:  1		Untrained Percentage: 0.10%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.01%
+location_idx:  5		Untrained Percentage: 0.17%
+location_idx:  6		Untrained Percentage: 0.09%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.02%
+location_idx: 12		Untrained Percentage: 0.08%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.04%
+location_idx: 18		Untrained Percentage: 0.05%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.03%
+location_idx: 24		Untrained Percentage: 0.02%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.02%
+location_idx: 30		Untrained Percentage: 0.12%
+location_idx: 31		Untrained Percentage: 0.01%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.00%
+location_idx: 35		Untrained Percentage: 0.17%
+
+Untrained Fan-in Synapse in Output layer:0.67%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.03%
+location_idx:  1		Untrained Percentage: 0.44%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.03%
+location_idx:  5		Untrained Percentage: 0.00%
+location_idx:  6		Untrained Percentage: 0.00%
+location_idx:  7		Untrained Percentage: 0.11%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.06%
+----------------------------------------------------
+
+--------------Instance 10999------------------------------
+11/06/2020 23:02:03
+Total untrained Synapse Percentage:1.05%
+
+Untrained Fan-in Synapse in Hidden layer:1.17%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 0.25%
+location_idx:  1		Untrained Percentage: 0.10%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.01%
+location_idx:  5		Untrained Percentage: 0.17%
+location_idx:  6		Untrained Percentage: 0.09%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.02%
+location_idx: 12		Untrained Percentage: 0.08%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.04%
+location_idx: 18		Untrained Percentage: 0.05%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.03%
+location_idx: 24		Untrained Percentage: 0.02%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.02%
+location_idx: 30		Untrained Percentage: 0.12%
+location_idx: 31		Untrained Percentage: 0.00%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.00%
+location_idx: 35		Untrained Percentage: 0.17%
+
+Untrained Fan-in Synapse in Output layer:0.64%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.03%
+location_idx:  1		Untrained Percentage: 0.44%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.00%
+location_idx:  5		Untrained Percentage: 0.00%
+location_idx:  6		Untrained Percentage: 0.00%
+location_idx:  7		Untrained Percentage: 0.11%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.06%
+----------------------------------------------------
+
+--------------Instance 11999------------------------------
+12/06/2020 00:02:19
+Total untrained Synapse Percentage:0.98%
+
+Untrained Fan-in Synapse in Hidden layer:1.08%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 0.24%
+location_idx:  1		Untrained Percentage: 0.10%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.01%
+location_idx:  5		Untrained Percentage: 0.16%
+location_idx:  6		Untrained Percentage: 0.09%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.01%
+location_idx: 12		Untrained Percentage: 0.07%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.02%
+location_idx: 18		Untrained Percentage: 0.05%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.02%
+location_idx: 24		Untrained Percentage: 0.02%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.02%
+location_idx: 30		Untrained Percentage: 0.11%
+location_idx: 31		Untrained Percentage: 0.00%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.00%
+location_idx: 35		Untrained Percentage: 0.17%
+
+Untrained Fan-in Synapse in Output layer:0.61%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.03%
+location_idx:  1		Untrained Percentage: 0.42%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.00%
+location_idx:  5		Untrained Percentage: 0.00%
+location_idx:  6		Untrained Percentage: 0.00%
+location_idx:  7		Untrained Percentage: 0.11%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.06%
+----------------------------------------------------
+
+--------------Instance 12999------------------------------
+12/06/2020 01:04:47
+Total untrained Synapse Percentage:0.92%
+
+Untrained Fan-in Synapse in Hidden layer:1.03%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 0.22%
+location_idx:  1		Untrained Percentage: 0.10%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.01%
+location_idx:  5		Untrained Percentage: 0.15%
+location_idx:  6		Untrained Percentage: 0.09%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.01%
+location_idx: 12		Untrained Percentage: 0.07%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.01%
+location_idx: 18		Untrained Percentage: 0.05%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.02%
+location_idx: 24		Untrained Percentage: 0.01%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.02%
+location_idx: 30		Untrained Percentage: 0.10%
+location_idx: 31		Untrained Percentage: 0.00%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.00%
+location_idx: 35		Untrained Percentage: 0.17%
+
+Untrained Fan-in Synapse in Output layer:0.56%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.03%
+location_idx:  1		Untrained Percentage: 0.42%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.00%
+location_idx:  5		Untrained Percentage: 0.00%
+location_idx:  6		Untrained Percentage: 0.00%
+location_idx:  7		Untrained Percentage: 0.08%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.03%
+----------------------------------------------------
+
+--------------Instance 13999------------------------------
+12/06/2020 02:09:14
+Total untrained Synapse Percentage:0.87%
+
+Untrained Fan-in Synapse in Hidden layer:0.96%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 0.22%
+location_idx:  1		Untrained Percentage: 0.10%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.00%
+location_idx:  5		Untrained Percentage: 0.14%
+location_idx:  6		Untrained Percentage: 0.09%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.01%
+location_idx: 12		Untrained Percentage: 0.07%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.01%
+location_idx: 18		Untrained Percentage: 0.04%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.02%
+location_idx: 24		Untrained Percentage: 0.01%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.02%
+location_idx: 30		Untrained Percentage: 0.09%
+location_idx: 31		Untrained Percentage: 0.00%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.00%
+location_idx: 35		Untrained Percentage: 0.16%
+
+Untrained Fan-in Synapse in Output layer:0.53%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.03%
+location_idx:  1		Untrained Percentage: 0.39%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.00%
+location_idx:  5		Untrained Percentage: 0.00%
+location_idx:  6		Untrained Percentage: 0.00%
+location_idx:  7		Untrained Percentage: 0.08%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.03%
+----------------------------------------------------
+
+--------------Instance 14999------------------------------
+12/06/2020 03:15:40
+Total untrained Synapse Percentage:0.81%
+
+Untrained Fan-in Synapse in Hidden layer:0.89%
+Untrained Fan-in Synapses breakdown by sublocation:
+location_idx:  0		Untrained Percentage: 0.20%
+location_idx:  1		Untrained Percentage: 0.08%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.00%
+location_idx:  5		Untrained Percentage: 0.14%
+location_idx:  6		Untrained Percentage: 0.09%
+location_idx:  7		Untrained Percentage: 0.00%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.00%
+location_idx: 10		Untrained Percentage: 0.00%
+location_idx: 11		Untrained Percentage: 0.01%
+location_idx: 12		Untrained Percentage: 0.05%
+location_idx: 13		Untrained Percentage: 0.00%
+location_idx: 14		Untrained Percentage: 0.00%
+location_idx: 15		Untrained Percentage: 0.00%
+location_idx: 16		Untrained Percentage: 0.00%
+location_idx: 17		Untrained Percentage: 0.01%
+location_idx: 18		Untrained Percentage: 0.04%
+location_idx: 19		Untrained Percentage: 0.00%
+location_idx: 20		Untrained Percentage: 0.00%
+location_idx: 21		Untrained Percentage: 0.00%
+location_idx: 22		Untrained Percentage: 0.00%
+location_idx: 23		Untrained Percentage: 0.02%
+location_idx: 24		Untrained Percentage: 0.01%
+location_idx: 25		Untrained Percentage: 0.00%
+location_idx: 26		Untrained Percentage: 0.00%
+location_idx: 27		Untrained Percentage: 0.00%
+location_idx: 28		Untrained Percentage: 0.00%
+location_idx: 29		Untrained Percentage: 0.02%
+location_idx: 30		Untrained Percentage: 0.08%
+location_idx: 31		Untrained Percentage: 0.00%
+location_idx: 32		Untrained Percentage: 0.00%
+location_idx: 33		Untrained Percentage: 0.00%
+location_idx: 34		Untrained Percentage: 0.00%
+location_idx: 35		Untrained Percentage: 0.15%
+
+Untrained Fan-in Synapse in Output layer:0.53%
+Untrained Fan-in Synapses breakdown by label:
+location_idx:  0		Untrained Percentage: 0.03%
+location_idx:  1		Untrained Percentage: 0.39%
+location_idx:  2		Untrained Percentage: 0.00%
+location_idx:  3		Untrained Percentage: 0.00%
+location_idx:  4		Untrained Percentage: 0.00%
+location_idx:  5		Untrained Percentage: 0.00%
+location_idx:  6		Untrained Percentage: 0.00%
+location_idx:  7		Untrained Percentage: 0.08%
+location_idx:  8		Untrained Percentage: 0.00%
+location_idx:  9		Untrained Percentage: 0.03%
+----------------------------------------------------
+

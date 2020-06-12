@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import codecs
 import json
-
-
+import pickle
+from SNN import WeightRAM
+from pathlib import Path
 #%% numpy stuff
 ## indexing multidimensional arrays 
 # y = np.arange(35).reshape(5,7)
@@ -321,102 +322,23 @@ import json
 #
 # arr_reshaped = arr.reshape(2, 6)
 #%%
+###################### Initialize WeightRAM #########################
+num_synapses = 10
+WeightRAM_inst = WeightRAM(num_synapses=num_synapses)
 
-class SpikeIncache_Hidden:
-    def __init__(self, depth_causal=2, depth_anticausal=2):
-        self.depth_causal = depth_causal
-        self.depth_anticausal = depth_anticausal
-        self.depth = depth_causal + depth_anticausal
-        self.write_ptr = 0
-        self.fired = 0
-        self.mem = [
-            {
-                "fired_synapse_addr": None,
-                "causal_tag": None,
-                "weight": None,
-                "time": None
-            } for entry in range(self.depth)
-        ]
+instance = 14999
 
-    def writeSpikeInInfo(self, fired_synapse_addr, time, weight):
-        if self.write_ptr < self.depth:
-            # check if the causal entry has been filled
-            if self.write_ptr < self.depth_causal:
-                if not self.fired:
-                    # write first
-                    self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
-                    self.mem[self.write_ptr]["time"] = time
-                    self.mem[self.write_ptr]["weight"] = weight
-                    self.mem[self.write_ptr]["causal_tag"] = 1
-                    # then increment write_ptr
-                    self.write_ptr += 1
-                else:
-                    self.write_ptr = self.depth_causal
-                    self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
-                    self.mem[self.write_ptr]["time"] = time
-                    self.mem[self.write_ptr]["weight"] = weight
-                    self.mem[self.write_ptr]["causal_tag"] = 0
-                    self.write_ptr += 1
+WeightRAM_save_path = "./WeightRAM/"+"Fig_37/"
+Path(WeightRAM_save_path).mkdir(parents=True, exist_ok=True)
 
-            # different from SpikeIncache for output layer neurons, SpikeIncache for hidden layer
-            # draws a causal/anti-causal cutoff depending on whether this hidden neuron has fired or not
-            else:
-                # only going to record in-spike event as anti-causal if the hidden neuron
-                # has already fired
-                if self.fired:
-                    self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
-                    self.mem[self.write_ptr]["time"] = time
-                    self.mem[self.write_ptr]["weight"] = weight
-                    self.mem[self.write_ptr]["causal_tag"] = 0
-                    self.write_ptr += 1
-
-    def writeSpikeInInfo_cyclic(self, fired_synapse_addr, time, weight):
-        # check if the causal entry has been filled
-        if self.write_ptr < self.depth_causal:
-            # if not fired
-            if not self.fired:
-                self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
-                self.mem[self.write_ptr]["time"] = time
-                self.mem[self.write_ptr]["weight"] = weight
-                self.mem[self.write_ptr]["causal_tag"] = 1
-                # then increment write_ptr
-                self.write_ptr += 1
-            else:
-                self.write_ptr = self.depth_causal
-                self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
-                self.mem[self.write_ptr]["time"] = time
-                self.mem[self.write_ptr]["weight"] = weight
-                self.mem[self.write_ptr]["causal_tag"] = 0
-                self.write_ptr += 1
-        # if causal entry has ben filled and starting to fill anti-causal entry
-        else:
-            # only fill in anti-causal if fired
-            if self.fired:
-                self.mem[self.write_ptr]["fired_synapse_addr"] = fired_synapse_addr
-                self.mem[self.write_ptr]["time"] = time
-                self.mem[self.write_ptr]["weight"] = weight
-                self.mem[self.write_ptr]["causal_tag"] = 0
-                # check if write_ptr has reached the end
-                # if so then cycle to the top of anti-causal region
-                if self.write_ptr == self.depth - 1:
-                    self.write_ptr = self.depth_causal
-                else:
-                    self.write_ptr += 1
-
-    def clearMem(self):
-        self.write_ptr = 0
-        self.fired = 0
-        self.mem = [
-            {
-                "fired_synapse_addr": None,
-                "causal_tag": None,
-                "weight": None,
-                "time": None
-            } for entry in range(self.depth)
-        ]
-
-SpikeIncache1 = SpikeIncache_Hidden(2,2)
-
-for i in range(0,6):
-    if i == 3: SpikeIncache1.fired = 1
-    SpikeIncache1.writeSpikeInInfo_cyclic(i, i ,i)
+json.dump(
+    list(WeightRAM_inst.synapse_addr),
+    codecs.open(WeightRAM_save_path+"synapse_idx_"+str(instance)+".json", 'w', encoding='utf-8'),
+    separators=(',',':'), sort_keys=True, indent=4
+)
+json.dump(
+    list(WeightRAM_inst.synapse_addr),
+    codecs.open(WeightRAM_save_path+"synapse_idx_"+str(instance)+".json", 'w', encoding='utf-8'),
+    separators=(',',':'), sort_keys=True, indent=4
+)
+#############################################################################################

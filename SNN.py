@@ -1045,7 +1045,7 @@ class SpikingNeuron:   # this class can be viewed as the functional unit that up
                     reward_signal, isf2f, isIntended,
                     moving_accuracy, accuracy_th,
                     A_causal_coarse=2, A_causal_fine=1, tau_causal=50,
-                    A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=50,
+                    A_anticausal_coarse=2, A_anticausal_fine=1, tau_anticausal=30,
                     max_weight=7, min_weight=-8, deltaWeight_causal_default=2, deltaWeight_anticausal_default=1,
                     debug=0): 
         if moving_accuracy >= accuracy_th:   # determine A

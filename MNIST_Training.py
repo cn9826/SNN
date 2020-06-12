@@ -6,6 +6,8 @@ import NetworkConnectivity
 import codecs
 import json
 from datetime import datetime
+from pathlib import Path
+import shutil
 
 def index_duplicate (seq, item):
     start_at = -1
@@ -28,6 +30,7 @@ def createMovingAccuracyFigure(num_instances):
     ax.set_xlim(0, num_instances + 1)
     ax.set_xticks(range(0, num_instances+1, 1000))
     ax.set_xticklabels(xticklabel_list)
+    #ax.set_xticklabels(xticklabel_list, fontsize=6, fontWeight='bold')
     ax.set_xlabel('Number of Instances', fontsize=14, fontweight='bold')
 
     yticklabel_list = ['{0:3.2f}'.format(i) for i in np.arange(0, 1.1, 0.05)]
@@ -190,6 +193,46 @@ def imshow_pooled(pooled_arr, num_edge_maps=4):
     for edge_idx in range(num_edge_maps):
         ax[edge_idx].imshow(pooled_arr[:, :, edge_idx], cmap='gray')
 
+def saveWeightRAM(instance, WeightRAM_inst, identifier):
+    ## expect identifier to be a string like "Fig_37"
+    save_path = "./WeightRAM/" + identifier + "/"
+
+    Path(save_path).mkdir(parents=True, exist_ok=True)
+    json.dump(
+        list(WeightRAM_inst.synapse_addr),
+        codecs.open(save_path + "synapse_idx_" + str(instance) + ".json", 'w', encoding='utf-8'),
+        separators=(',', ':'), sort_keys=True, indent=4
+    )
+    json.dump(
+        list(WeightRAM_inst.weight),
+        codecs.open(save_path + "weight_" + str(instance) + ".json", 'w', encoding='utf-8'),
+        separators=(',', ':'), sort_keys=True, indent=4
+    )
+    json.dump(
+        list(WeightRAM_inst.pre_neuron_idx),
+        codecs.open(save_path + "pre_neuron_idx_" + str(instance) + ".json", 'w', encoding='utf-8'),
+        separators=(',', ':'), sort_keys=True, indent=4
+    )
+    json.dump(
+        list(WeightRAM_inst.post_neuron_idx),
+        codecs.open(save_path + "post_neuron_idx_" + str(instance) + ".json", 'w', encoding='utf-8'),
+        separators=(',', ':'), sort_keys=True, indent=4
+    )
+    json.dump(
+        list(WeightRAM_inst.dirty),
+        codecs.open(save_path + "dirty_idx_" + str(instance) + ".json", 'w', encoding='utf-8'),
+        separators=(',', ':'), sort_keys=True, indent=4
+    )
+    json.dump(
+        list(WeightRAM_inst.post_neuron_layer),
+        codecs.open(save_path + "post_neuron_layer_" + str(instance) + ".json", 'w', encoding='utf-8'),
+        separators=(',', ':'), sort_keys=True, indent=4
+    )
+    json.dump(
+        list(WeightRAM_inst.post_neuron_location),
+        codecs.open(save_path + "post_neuron_location_" + str(instance) + ".json", 'w', encoding='utf-8'),
+        separators=(',', ':'), sort_keys=True, indent=4
+    )
 # %% define SNN parameters
 ################################################################
 ## Specify dataset parameters
@@ -207,8 +250,8 @@ duration = 80
 tau_u = 8
 tau_v = None
 vth_input = 1
-vth_hidden = 350    # with 4-spike consideration: [(9-1) x 5 x tau_u, 9 x 5 x tau_u)
-                    # with 4-spike consideration: [(9-1) x 7 x tau_u, *9 x 7 x tau_u)
+vth_hidden = 350    # with 9-spike consideration: [(9-1) x 5 x tau_u, *9 x 5 x tau_u)
+                    # with 9-spike consideration: [(9-1) x 7 x tau_u, 9 x 7 x tau_u)
 
 vth_output = 672   # with 12-spike consideration: [(12-1) x 5 x tau_u, 12 x 5 x tau_u)
                     # with 12-spike consideration: [(12-1) x 7 x tau_u, *12 x 7 x tau_u)
@@ -228,8 +271,10 @@ num_instances = 15000        # number of training instances from filtered-pooled
 ## Simulation Settings
 debug_mode = 0
 
+save_weight = 1
+
 dump_training_stats = 1
-identifier = "Fig_33"
+identifier = "Fig_35"
 training_stat_dump_intvl = 1000
 
 plot_MovingAccuracy = 1
@@ -587,7 +632,7 @@ for instance in range(num_instances):
                     moving_accuracy=moving_accuracy, accuracy_th=accuracy_th,
                     correct_cnt=correct_cnt,
                     num_causal_output = 12, num_anticausal_output = 3,
-                    num_causal_hidden = 9, num_anticausal_hidden=9,
+                    num_causal_hidden = 6, num_anticausal_hidden=6,
                     debug_mode=debug_mode
     )
 
@@ -658,3 +703,6 @@ print("End of Program!")
 
 if plot_MovingAccuracy:
     fig_accuracy.savefig(printout_dir+"Supervised/"+identifier,quality=100, optimize=True)
+
+if save_weight:
+    saveWeightRAM(instance, WeightRAM, identifier)
